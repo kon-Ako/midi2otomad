@@ -1,0 +1,32 @@
+--track@BPM:BPM,30,240,160,1
+--track@mesPlus:開始小節,-240,240,0,1
+--track@framePlus:フレームズレ,-120,120,0,1
+--track@metre:拍子,2,8,4,1
+--check@resetThis:リセット,0
+
+akto = akto or {}
+if(resetThis==1) then
+    package.loaded["reader/midi2Basic"] = nil
+    package.loaded["reader/midi2Rhythm"] = nil
+    debug_print("Resetting MIDI2Otomad")
+end
+akto.midiToOtomad = require("reader/midi2Basic")
+akto.midiToRhythm = require("reader/midi2Rhythm")
+
+
+local R = akto.midiToOtomad
+
+--Execute every frame
+R.scriptPath= obj.getinfo("script_path")
+
+R.BPM       = BPM
+R.mesPlus   = mesPlus
+R.framePlus = framePlus
+R.metre     = metre
+
+R.curBeat   = R.toBeat(obj.time+framePlus/obj.framerate)+ R.mesPlus*R.metre +.00001
+R.curMes    = R.curBeat/R.metre
+R.furBeat   = R.floor(R.curBeat)
+R.furMes    = R.floor(R.curMes)
+
+return R

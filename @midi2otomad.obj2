@@ -1,0 +1,28 @@
+@デバッグ
+--font@font:フォント名,MS UI Gothic
+--track@size:サイズ,8,400,48
+--track@animType:タイプ,0,3,0,1
+
+local R = akto.midiToOtomad
+
+obj.setfont(font, size)
+
+obj.load("text","Frame: "..obj.frame.." / "..obj.totalframe.."\n"..
+"B: "..R.furBeat.." + "..math.floor(4*(R.curBeat%1)).."/4".."\n"..
+"measure#: "..R.furMes.."\n"..
+"BPM:= "..R.BPM.." ; Metre:= "..R.metre.."/4")
+
+obj.draw()
+
+@画像読み込み
+--file@pathObj:画像
+--flie@pathMidi:MIDI
+
+--now testing
+
+local m2R= akto.midiToRhythm.midiToRhythm(akto.midiToOtomad.scriptPath.."test.MID")
+
+debug_print(m2R[1])
+
+obj.load(pathObj)
+
