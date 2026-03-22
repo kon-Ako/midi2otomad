@@ -13,8 +13,8 @@ end
 akto.midiToOtomad = require("reader/midi2Basic")
 akto.midiToRhythm = require("reader/midi2Rhythm")
 
-
 local R = akto.midiToOtomad
+local L = akto.midiToRhythm
 
 --Execute every frame
 R.scriptPath= obj.getinfo("script_path")
