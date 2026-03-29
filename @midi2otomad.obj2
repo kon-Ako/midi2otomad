@@ -3,7 +3,7 @@
 --track@size:サイズ,8,400,48
 --track@animType:タイプ,0,3,0,1
 
-local R = akto.midiToOtomad
+local R = Akto.MidiToOtomad
 
 obj.setfont(font, size)
 
@@ -16,13 +16,21 @@ obj.draw()
 
 @画像読み込み
 --file@pathObj:画像
---flie@pathMidi:MIDI
+--file@pathMidi:MIDIファイル
+--track@something:うひょ,0,128,128,1
 
---now testing
+local currentPath = currentPath or "PLEASE INITIATE"
+local table = table or {}
 
-local m2R= akto.midiToRhythm.midiToRhythm(akto.midiToOtomad.scriptPath.."test.MID")
+if(pathMidi == "") then
+    pathMidi = Akto.MidiToOtomad.scriptPath.."test.MID"
+end
 
-debug_print(m2R[1])
+if(currentPath ~= pathMidi) then
+    table = Akto.MidiToArray.midiToRhythm(pathMidi)
+    debug_print("Scanning MIDI")
+    currentPath = pathMidi
+end
 
 obj.load(pathObj)
 

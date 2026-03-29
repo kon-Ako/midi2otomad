@@ -4,17 +4,17 @@
 --track@metre:拍子,2,8,4,1
 --check@resetThis:リセット,0
 
-akto = akto or {}
+Akto = Akto or {}
 if(resetThis==1) then
-    package.loaded["reader/midi2Basic"] = nil
-    package.loaded["reader/midi2Rhythm"] = nil
+    package.loaded["reader/midi2Analyzer"] = nil
+    package.loaded["reader/midi2Animator"] = nil
     debug_print("Resetting MIDI2Otomad")
 end
-akto.midiToOtomad = require("reader/midi2Basic")
-akto.midiToRhythm = require("reader/midi2Rhythm")
+Akto.MidiToArray = require("reader/midi2Analyzer")
+Akto.MidiToOtomad = require("reader/midi2Animator")
 
-local R = akto.midiToOtomad
-local L = akto.midiToRhythm
+local R = Akto.MidiToOtomad
+local L = Akto.MidiToArray
 
 --Execute every frame
 R.scriptPath= obj.getinfo("script_path")
