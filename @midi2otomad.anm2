@@ -1,0 +1,172 @@
+@音MADデバッグ
+--track@mode:モード,1,8,1,1
+
+if(mode == 1) then
+    local str = "Global has the following:"
+    for k,v in pairs(_G) do
+        str = str.."\n"..k.." of "..type(v)
+    end
+    obj.setfont("Nishiki-teki", 24)
+    obj.load("text", str)
+end
+
+
+@MIDI2音MAD化
+--file@pathMidi:MIDIファイル
+--check@resetThis:再読み込み,0
+--check@showNoteEvent:表示,0
+
+_G.Akto = _G.Akto or {}
+if(resetThis==1) then
+    package.loaded["library_M2O/midi2Analyzer"] = nil
+    package.loaded["library_M2O/midi2Animator"] = nil
+    debug_print("Resetting MIDI2Otomad")
+end
+Akto.MidiToAnalyzer = require("library_M2O/midi2Analyzer")
+Akto.MidiToAnimator = require("library_M2O/midi2Animator")
+
+if(not Akto.MidiToAnimator) then
+    obj.load("text","ERROR\n起動オブジェクトが存在しません！\nBoot Object doesn't exist!")
+else
+    if(pathMidi == "") then
+        pathMidi = Akto.MidiToAnimator.scriptPath.."\\test.MID"
+    end
+    Akto.MidiToAnimator.cacheMidi(pathMidi, resetThis)
+end
+
+unchi = "HOGE"
+
+@音MAD基本反転
+--check@byGrid:軸回転式,false
+--track@delayIndex:カウントずらし,0,1,0,1
+--check@vertical:上下反転,0
+--check@horizontal:左右反転,0
+--check@brightness:輝度反転,0
+--check@hue:色相反転,0
+--check@trasnparency:透明度反転,0
+--file@pathMidi:参照MIDI上書
+
+local a,b,c,d = Akto.MidiToAnimator.loadCacheLatestNote()
+a = (a+delayIndex)%2
+if(byGrid) then
+    obj.rx=180*a*vertical
+    obj.ry=180*a*horizontal
+else
+    obj.effect("反転",
+    "上下反転", a*vertical,
+    "左右反転", a*horizontal,
+    "輝度反転", a*brightness,
+    "色相反転", a*hue,
+    "透明度反転", a*trasnparency
+    )
+end
+
+
+@音MAD基本移動
+--track@x:X,-5000,5000,0,0.01
+--track@y:Y,-5000,5000,0,0.01
+--track@delayIndex:カウントずらし,-100,100,0,1
+--select@easing:イージング=1,直線=1,∧三角波=2,二次関数イン=3,二次関数アウト=4,∧二次関数往復=5,三次関数イン=6,三次関数アウト=7,∧三次関数往復=8,多項式イン=9,多項式アウト=10,∧多項式往復=11,指数関数イン=12,指数関数アウト=13,∧指数関数往復=14,サインイン=15,コサインアウト=16,サイン往復=17
+--track@length:時間(拍),0,10,1,0.01
+--track@amplitude:勢い,0,40,4,0.01
+--check@isNorm:正規化,false
+--check@isDecaying:減衰,1
+--check@isAlternating:交互反転,0
+--file@pathMidi:参照MIDI上書
+
+local M = Akto.MidiToAnimator
+
+local a,b,c,d = M.loadCacheLatestNote(pathMidi)
+a = a + delayIndex
+local sign = 1-2*(isAlternating*a%2)
+local anim = isNorm and c or b
+local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim/length), amplitude))
+
+obj.ox = obj.ox + x*progress*sign
+obj.oy = obj.oy + y*progress*sign
+
+@音MAD基本拡大
+--track@zoom:拡大率,0,800,200,0.01
+--track@delayIndex:カウントずらし,-100,100,0,1
+--select@easing:イージング=1,直線=1,∧三角波=2,二次関数イン=3,二次関数アウト=4,∧二次関数往復=5,三次関数イン=6,三次関数アウト=7,∧三次関数往復=8,多項式イン=9,多項式アウト=10,∧多項式往復=11,指数関数イン=12,指数関数アウト=13,∧指数関数往復=14,サインイン=15,コサインアウト=16,サイン往復=17
+--track@length:時間(拍),0,10,1,0.01
+--track@amplitude:勢い,0,40,4,0.01
+--check@isNorm:正規化,false
+--check@isDecaying:減衰,1
+--check@isAlternating:交互反転,0
+--file@pathMidi:参照MIDI上書
+
+local M = Akto.MidiToAnimator
+
+local a,b,c,d = M.loadCacheLatestNote(pathMidi)
+a = a + delayIndex
+local sign = 1-2*(isAlternating*a%2)
+local anim = isNorm and c or b
+local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim/length), amplitude))
+
+obj.zoom = obj.zoom*(1+progress*sign*(zoom-100)/100)
+-- idk why but obj.zoom resets with every filter, but is displayed if not obj.draw()ed
+M.CacheMisc.zoom[obj.layer] = obj.zoom
+
+@音MADステップ回転
+--track@divisions:分割,1,64,4,1
+--track@delayIndex:カウントずらし,-100,100,0,1
+--select@easing:イージング=1,直線=1,∧三角波=2,二次関数イン=3,二次関数アウト=4,∧二次関数往復=5,三次関数イン=6,三次関数アウト=7,∧三次関数往復=8,多項式イン=9,多項式アウト=10,∧多項式往復=11,指数関数イン=12,指数関数アウト=13,∧指数関数往復=14,サインイン=15,コサインアウト=16,サイン往復=17
+--track@length:時間(拍),0,10,1,0.01
+--track@amplitude:勢い,0,40,4,0.01
+--check@isNorm:正規化,false
+--check@isDecaying:減衰,1
+--check@isCounterClockwise:反時計回り,0
+--file@pathMidi:参照MIDI上書
+
+local M = Akto.MidiToAnimator
+
+local a,b,c,d = M.loadCacheLatestNote(pathMidi)
+a = a + delayIndex
+local sign = 1-2*(isCounterClockwise)
+local anim = isNorm and c or b
+local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim/length), amplitude))
+
+obj.rz = obj.rz + sign*((360/divisions*(a-1))%360 - 360/divisions*progress)
+
+@音MADラスター
+--track@width:横幅,0,2000,100,1
+--track@height:高さ,0,2000,100,1
+--track@interval:周期,-40,40,1,0.01
+--check@randomW:ランダム振幅,0
+--select@easing:イージング=1,直線=1,∧三角波=2,二次関数イン=3,二次関数アウト=4,∧二次関数往復=5,三次関数イン=6,三次関数アウト=7,∧三次関数往復=8,多項式イン=9,多項式アウト=10,∧多項式往復=11,指数関数イン=12,指数関数アウト=13,∧指数関数往復=14,サインイン=15,コサインアウト=16,サイン往復=17
+--track@length:時間(拍),0,10,1,0.01
+--track@amplitude:勢い,0,40,4,0.01
+--check@isNorm:正規化,false
+--check@isDecaying:減衰,1
+--check@vertical:縦ラスター,0
+--check@isAlternating:交互ラスター,0
+--file@pathMidi:参照MIDI上書
+
+local M = Akto.MidiToAnimator
+local a,b,c,d = M.loadCacheLatestNote(pathMidi)
+local anim = isNorm and c or b
+local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim/length), amplitude))
+
+obj.effect("ラスター",
+"横幅",width*progress,
+"高さ",height,
+"周期",interval,
+"縦ラスター",(vertical+isAlternating*a)%2,
+"ランダム振幅",randomW)
+
+@仮想バッファに描画
+--track@width:サイズW,0,8000,100,1
+--track@height:サイズH,0,8000,100,1
+
+local M = Akto.MidiToAnimator
+
+if(width == 0 or height == 0) then
+    width = obj.w
+    height = obj.h
+end
+
+obj.setoption("drawtarget", "tempbuffer", width, height)
+obj.draw(obj.ox, obj.oy, obj.oz, M.CacheMisc.zoom[obj.layer], obj.alpha, obj.rx, obj.ry, obj.rz)
+obj.load("tempbuffer")
+obj.setoption("drawtarget", "framebuffer")

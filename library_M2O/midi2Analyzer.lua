@@ -1,56 +1,48 @@
-local M = {}
+local L = {}
 
--- For Debug
-local function printHex(num)
-    debug_print(string.format("%x", num))
-end
+function L.writeTableContents(table, isShowTypes, strH, str1, str2, str3, strT)
+    strH = strH or "Contents are: "
+    str1 = str1 or "\n"
+    str2 = str2 or " has "
+    str3 = str3 or "."
+    strT = strT or "\n----"
 
-local function printPairs(dict)
-    debug_print("\n----Starting printPairs----")
-    for k,v in pairs(dict) do
-        debug_print(k.." is "..type(v))
-    end
-    debug_print("----\n")
-end
-
----@param dict dictionary   function reads the content of dict
-local function printStrPairs(dict)
-    debug_print("\n----Starting printStrPairs----")
-    for k,v in pairs(dict) do
-        if(type(v)=="string") then
-            debug_print(k.." is Str: "..v)
-        elseif(type(v)=="boolean") then
-            if(v) then 
-                debug_print(k.." was true")
-            else
-                debug_print(k.." was false")
-            end
-        else
-            debug_print(k.." is type: "..type(v))
+    if(isShowTypes) then
+        for k,v in pairs(table) do
+            strH = strH..str1..k..str2..type(v)..str3
+        end
+    else
+        for k,v in pairs(table) do
+            strH = strH..str1..k..str2..v..str3
         end
     end
-    debug_print("\n----\n")
+
+    strH = strH..strT
+    return strH
 end
 
-local function printArrayContents(array)
-    debug_print("\n----Starting printArrayContents----")
-    local a = "{"
-    for k,v in ipairs(array) do
-        a = a..v..", "
+function L.writeListContents(table, isShowTypes, strH, str1, str2, str3, strT)
+    strH = strH or "Contents are: "
+    str1 = str1 or "\n#"
+    str2 = str2 or " has "
+    str3 = str3 or "."
+    strT = strT or "\n----"
+
+    if(isShowTypes) then
+        for k,v in ipairs(table) do
+            strH = strH..str1..k..str2..type(v)..str3
+        end
+    else
+        for k,v in ipairs(table) do
+            strH = strH..str1..k..str2..v..str3
+        end
     end
-    debug_print("Cardinality: "..#array.."; "..a:sub(1,-3).."}")
+
+    strH = strH..strT
+    return strH
 end
 
-local function printDictContents(array)
-    debug_print("\n----\nStarting printDictContents\n----")
-    local a = ""
-    for k,v in pairs(array) do
-        a = a..k.." has "..v.."\n"
-    end
-    debug_print(a)
-end
-
-M.noteNames = {"C-1", "C#-1", "D-1", "D#-1", "E-1", "F-1", "F#-1", "G-1", "G#-1", "A-1", "A#-1", "B-1", 
+L.noteNames = {"C-1", "C#-1", "D-1", "D#-1", "E-1", "F-1", "F#-1", "G-1", "G#-1", "A-1", "A#-1", "B-1", 
 "C0", "C#0", "D0", "D#0", "E0", "F0", "F#0", "G0", "G#0", "A0", "A#0", "B0", 
 "C1", "C#1", "D1", "D#1", "E1", "F1", "F#1", "G1", "G#1", "A1", "A#1", "B1", 
 "C2", "C#2", "D2", "D#2", "E2", "F2", "F#2", "G2", "G#2", "A2", "A#2", "B2", 
@@ -60,12 +52,12 @@ M.noteNames = {"C-1", "C#-1", "D-1", "D#-1", "E-1", "F-1", "F#-1", "G-1", "G#-1"
 "C6", "C#6", "D6", "D#6", "E6", "F6", "F#6", "G6", "G#6", "A6", "A#6", "B6", 
 "C7", "C#7", "D7", "D#7", "E7", "F7", "F#7", "G7", "G#7", "A7", "A#7", "B7", 
 "C8", "C#8", "D8", "D#8", "E8", "F8", "F#8", "G8", "G#8", "A8", "A#8", "B8", 
-"C9", "C#9", "D9", "D#9", "E9", "F9", "F#9", "G9"--, function(thisAr, index) return thisAr[index-1] end
+"C9", "C#9", "D9", "D#9", "E9", "F9", "F#9", "G9", getName = function(thisAr, index) return thisAr[index+1] end
 }
 
 ---@return int      the number read
 ---@return int      the index after the read bytes
-function M.readByte(string, start, len)
+function L.readByte(string, start, len)
     local num = 0
     for i=0, len-1 do
         num = num*256 + string:byte(start+i)
@@ -73,7 +65,7 @@ function M.readByte(string, start, len)
     return num, start + len
 end
 
-function M.isVLQ(num)
+function L.isVLQ(num)
     return (false or (num>=128)), num%128
 end
 
@@ -81,19 +73,19 @@ end
 ---@param start int         the starting index to read from
 ---@return int              the result as int
 ---@return int              the index after the VLQ as int
-function M.readVLQ(string, start)
+function L.readVLQ(string, start)
     local bool, num, digit = true, 0, 0
     while (bool) do
-        bool, digit = M.isVLQ(string:byte(start))
+        bool, digit = L.isVLQ(string:byte(start))
         num = num*128 + digit
         start = start + 1
     end
     return num, start
 end
 
----@param path String   the path to MIDI to read.    
+---@param path String   the path of MIDI to read.   MIDIのファイルパス
 ---@return String       MIDI as string of binary.   迫真!バイナリのStringと化したMIDI先輩
-function M.midiOpenAsString(pathMidi)
+function L.midiOpenAsString(pathMidi)
     local str = ""
     local file = assert(io.open(pathMidi, "rb"))
     if (not file) then
@@ -112,9 +104,9 @@ function M.midiOpenAsString(pathMidi)
     return str
 end
 
----@param string String     MIDI as string of binary.   迫真!バイナリのStringと化したMIDI先輩
----@return dictionary       easily readable properties of MIDI
-function M.midiDecode(string)
+---@param string String     MIDI as string of binary.       迫真!バイナリのStringと化したMIDI先輩
+---@return dictionary       MIDI deconstructed into table.  テーブルとして解体したMIDI
+function L.midiDecode(string)
     local dict = {}
     local currentSize = string:byte(7)*256 + string:byte(8)
     local curIndx = 1
@@ -140,12 +132,12 @@ function M.midiDecode(string)
             break
         end
         --Read the size of the track, and put the pointer to the track's array
-        currentSize, pos  = M.readByte(string, pos+4, 4)
+        currentSize, pos  = L.readByte(string, pos+4, 4)
         beganMtrk = pos - 1
         while(pos < currentSize + beganMtrk) do
             dict.raw.track[curIndx] = trackIndex
             --Record Delta Time
-            currentData, pos = M.readVLQ(string, pos)
+            currentData, pos = L.readVLQ(string, pos)
             cumulativeTime = cumulativeTime + currentData
             dict.raw.deltaTime[curIndx] = currentData
             dict.raw.absoluteTime[curIndx] = cumulativeTime
@@ -158,6 +150,7 @@ function M.midiDecode(string)
             else
                 dict.raw.status[curIndx] = runningStatus
             end
+
             if(dict.raw.status[curIndx] >= 0xC0 and dict.raw.status[curIndx] < 0xE0) then
                 --Execute analysis on Program Change / Channel Aftertouch
                 dict.raw.channel[curIndx] = (dict.raw.status[curIndx])%16
@@ -175,15 +168,16 @@ function M.midiDecode(string)
                 pos = pos + 1
             elseif(dict.raw.status[curIndx] < 0xFF) then
                 --Execute analysis on Common System Event
-                systemEventLength, pos = M.readVLQ(string ,pos)
+                systemEventLength, pos = L.readVLQ(string ,pos)
                 dict.raw.note[curIndx] = string:sub(pos, pos + systemEventLength - 1)
                 pos = pos + systemEventLength
             else
                 --Execute analysis on Meta Event
                 metaType = string:byte(pos)
+                dict.raw.note[curIndx] = metaType
                 pos = pos + 1
-                systemEventLength, pos = M.readVLQ(string ,pos)
-                dict.raw.note[curIndx] = string:sub(pos, pos + systemEventLength - 1)
+                systemEventLength, pos = L.readVLQ(string ,pos)
+                dict.raw.velocity[curIndx] = string:sub(pos, pos + systemEventLength - 1)
                 pos = pos + systemEventLength
             end
             curIndx = curIndx + 1
@@ -197,10 +191,10 @@ function M.midiDecode(string)
     return dict
 end
 
----@param array array   dictionary extracted from M.midiDecode()
----@return dictionary   dictionary of note events easily read by player
-function M.midiNoteDecode(dict)
-    local noteD= { time = {}, length = {}, track = {}, channel = {}, note = {}, notename = {}, velocity = {}, loopAt = 0}
+---@param dict dictionary   MIDI deconstructed into table.  テーブルとして解体したMIDI
+---@return dictionary       dictionary of note events easily read by player
+function L.midiNoteDecode(dict)
+    local noteD= { time = {}, length = {}, track = {}, channel = {}, note = {}, notename = {}, velocity = {}, trackEndTime = {}, loopAt = 1}
     local R = dict.raw
     local ind, finishInd = 1, 1
     local activeNotes = {}
@@ -208,11 +202,11 @@ function M.midiNoteDecode(dict)
 
     for k,v in ipairs(R.status) do
         eventType = bit.rshift(v, 4)
-        curTk = R.track[k]
-        curCh = R.channel[k]
-        curNt = R.note[k]
-        curVl = R.velocity[k]
-        curAT = R.absoluteTime[k]/dict.ppq
+        curTk = R.track[k] or curTk
+        curCh = R.channel[k] or curCh
+        curNt = R.note[k] or curNt
+        curVl = R.velocity[k] or curVl
+        curAT = R.absoluteTime[k]/dict.ppq or curAT
 
         if(eventType == 9) then
             key = string.format("%d_%d_%d", curTk, curCh, curNt)
@@ -220,7 +214,7 @@ function M.midiNoteDecode(dict)
             noteD.track[ind] = curTk
             noteD.channel[ind] = curCh
             noteD.note[ind] = curNt
-            --noteD.notename[k] = M.noteNames[129](M.noteNames, noteD.note[k])
+            --noteD.notename[k] = L.noteNames[129](L.noteNames, noteD.note[k])
             noteD.velocity[ind] = curVl
 
             activeNotes[key] = ind
@@ -232,10 +226,16 @@ function M.midiNoteDecode(dict)
                 noteD.length[finishInd] = (R.absoluteTime[k]/dict.ppq) - noteD.time[finishInd]
                 activeNotes[key] = nil
             end
+        elseif(eventType == 0xF) then
+            if((v == 0xFF) and curNt == 0x2F) then
+                noteD.trackEndTime[curTk] = curAT
+            end
         end
 
-        noteD.loopAt = 0
+    end
 
+    for k,v in ipairs(noteD.trackEndTime) do
+        noteD.loopAt = math.max(noteD.loopAt, v)
     end
 
     return noteD
@@ -244,33 +244,13 @@ end
 
 ---@param pathMidi string   the file path for MIDI to load 読み込むMIDIのファイルパス
 ---@return dictionary       data of rhythm that Lua could easily interpret  抽出したデータをわかりやすく作り直したもの。
-function M.midiToRhythm(pathMidi)
+function L.midiToRhythm(pathMidi)
     local dict = {}
     local rym = {}
-    local string = M.midiOpenAsString(pathMidi)
-    dict = M.midiDecode(string)
-    rym = M.midiNoteDecode(dict)
-    printStrPairs(dict)
-    --[[
-    debug_print("track")
-    printArrayContents(dict.raw.track)
-    debug_print("delta time")
-    printArrayContents(dict.raw.deltaTime)
-    debug_print("status")
-    printArrayContents(dict.raw.status)
-    debug_print("channel")
-    printArrayContents(dict.raw.channel)
-    debug_print("notes")
-    printArrayContents(dict.raw.note)
-    debug_print("velocity")
-    printArrayContents(dict.raw.velocity)
-
-    debug_print("time")
-    printArrayContents(rym.time)
-    debug_print("length")
-    printArrayContents(rym.length)
-    ]]
+    local string = L.midiOpenAsString(pathMidi)
+    dict = L.midiDecode(string)
+    rym = L.midiNoteDecode(dict)
     return rym
 end
 
-return M
+return L

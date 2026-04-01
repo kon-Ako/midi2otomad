@@ -1,36 +1,75 @@
-@デバッグ
+@情報表示
+--select@info:情報=1,ペアレント=1,読込済MIDI一覧=2
 --font@font:フォント名,MS UI Gothic
 --track@size:サイズ,8,400,48
 --track@animType:タイプ,0,3,0,1
+--check@figure:図式開示(未実装),false
 
-local R = Akto.MidiToOtomad
+local M = Akto.MidiToAnimator
+local L = Akto.MidiToAnalyzer
+obj.setfont(font, size, 3)
+local str = "How did you break this script?\nどうやってこのバグを発生させたッ！？"
 
-obj.setfont(font, size)
+if(not M) then
+    str = "Parent Object does not exist!\nペアレントオブジェクトが存在しません！"
+elseif(info == 1) then
+    str = "Frame: "..M.curFrame.." / "..M.totFrame.."\n"..
+    "Beat#: "..M.furBeat.." + "..math.floor(4*(M.curBeat%1)).."/4".."\n"..
+    "Measure#: "..M.furMes.."\n"..
+    "BPM:= "..M.bpm.." ; Metre:= "..M.metre.."/4".."\n"
+elseif(info == 2) then
+    str = L.writeTableContents(M.CacheMidi, true, "読み込み済み, Loaded MIDI: ", "\n", " exists as ", ".", "\nEND")
+end
 
-obj.load("text","Frame: "..obj.frame.." / "..obj.totalframe.."\n"..
-"B: "..R.furBeat.." + "..math.floor(4*(R.curBeat%1)).."/4".."\n"..
-"measure#: "..R.furMes.."\n"..
-"BPM:= "..R.BPM.." ; Metre:= "..R.metre.."/4")
+obj.load("text", str)
 
-obj.draw()
-
-@画像読み込み
+@画像音MAD
 --file@pathObj:画像
 --file@pathMidi:MIDIファイル
---track@something:うひょ,0,128,128,1
+--check@isDebug:デバッグ,false
 
-local currentPath = currentPath or "PLEASE INITIATE"
-local table = table or {}
+local M = Akto.MidiToAnimator
 
 if(pathMidi == "") then
-    pathMidi = Akto.MidiToOtomad.scriptPath.."test.MID"
+    pathMidi = M.scriptPath.."test.MID"
 end
 
-if(currentPath ~= pathMidi) then
-    table = Akto.MidiToArray.midiToRhythm(pathMidi)
-    debug_print("Scanning MIDI")
-    currentPath = pathMidi
+M.saveCacheMidi(pathMidi)
+local arr = M.CacheMidi[pathMidi]
+M.saveCacheLatestNote(M.curBeat, arr, 2, pathMidi)
+
+local aa, ab, ac, ad = M.CacheNotePress[obj.layer].index, M.CacheNotePress[obj.layer].sustain, M.CacheNotePress[obj.layer].sustNorm, M.CacheNotePress[obj.layer].isPressed
+ab = math.floor(ab*100)/100
+ac = math.floor(ac*100)/100
+local ae = ad and "T" or "F"
+
+if(isDebug) then
+    obj.load("text", aa.." has "..arr.time[aa].."\nPlaying now: "..ab.."\nCompleted: "..ac.."\nand is "..ae)
+else
+    obj.load("image",pathObj)
 end
 
-obj.load(pathObj)
+@動画音MAD
+--file@pathObj:画像
+--file@pathMidi:MIDIファイル
+--track@startTime:再生位置,0,10000,0,0.01
+--track@playSpeed:再生速度,-2000,2000,100,0.01
+--check@isDebug:デバッグ,false
 
+local M = Akto.MidiToAnimator
+
+if(pathMidi == "") then
+    pathMidi = M.scriptPath.."test.MID"
+end
+
+M.saveCacheMidi(pathMidi)
+local arr = M.CacheMidi[pathMidi]
+M.saveCacheLatestNote(M.curBeat, arr, 2, pathMidi)
+
+local index, sustain, sustNorm, isPressed = M.loadCacheLatestNote()
+local vidLength = 0
+if(isDebug) then
+    obj.load("text", index.." has "..arr.time[index].."\nPlaying now: "..sustain.."\nCompleted: "..sustNorm.."\nand is "..tostring(isPressed))
+else
+    vidLength = obj.load("movie",pathObj,math.max(startTime+playSpeed/100*M.unBeat(sustain), 0))
+end

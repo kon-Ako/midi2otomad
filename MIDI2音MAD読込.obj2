@@ -1,0 +1,39 @@
+--file@pathMidi:MIDIファイル
+--check@resetThis:再読み込み,0
+--check@showNoteEvent:表示,0
+
+if(not Akto.MidiToAnimator) then
+    obj.load("text","ERROR\n起動オブジェクトが存在しません！\nBoot Object doesn't exist!")
+else
+    Akto.MidiToAnimator.cacheMidi(pathMidi, resetThis)
+end
+
+if(showNoteEvent == 1 ) then
+    local C = Akto.MidiToAnimator.MidiCache[pathMidi]
+    local str = pathMidi.."の解析結果:"
+    str = str.."\ntime, length, note, velocity, channel, track"
+
+    for i=1, #(C.time) do
+        str = str.."\n"..i..": "
+        str = str..(math.floor(100*C.time[i])/100)..", "
+        str = str..(math.floor(100*C.length[i])/100)..", "
+        str = str..C.note[i]..", "
+        str = str..C.velocity[i]..", "
+        str = str..C.channel[i]..", "
+        str = str..C.track[i]..", "
+    end
+--[[
+    for k,v in pairs(Akto.MidiToAnimator.MidiCache[pathMidi]) do
+        str = str.."\n "..k..": "
+        if(type(v) == "table") then
+            for l,w in ipairs(v) do
+                str = str..(math.floor(100*w)/100)..", "
+            end
+        else
+            str = str..v
+        end
+    end
+]]
+    str = str.."\n以上。"
+    obj.load("text", str)
+end
