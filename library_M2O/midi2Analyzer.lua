@@ -1,3 +1,5 @@
+debug_print("Loading midi2Analyzer.lua")
+
 local L = {}
 
 function L.writeTableContents(table, isShowTypes, strH, str1, str2, str3, strT)

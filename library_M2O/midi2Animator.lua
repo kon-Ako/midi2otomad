@@ -1,3 +1,5 @@
+debug_print("Loading midi2Animator.lua")
+
 local M = {}
 
 debug_print("Initiating MIDI2Otomad...")
@@ -83,14 +85,19 @@ function M.sign(num)
 end
 
 function M.findLatestNote(currentTime, noteEvents, lastIndexRead)
-    if(not lastIndexRead) then
-        lastIndexRead = 1
-    elseif(noteEvents.time[lastIndexRead] > currentTime) then
-        --debug_print("BACK TRACK")
+    lastIndexRead = lastIndexRead or 1
+
+    local val, nextVal, nextnextVal= noteEvents.time[lastIndexRead], (noteEvents.time[lastIndexRead+1] or noteEvents.time[lastIndexRead]*2), (noteEvents.time[lastIndexRead+2] or noteEvents.time[lastIndexRead]*2)
+    --Immediately check if the current index & the next index is a candidate; set lastIndexRead to 1 if time is reveresed back.
+    if((val <= currentTime) and (currentTime < nextVal)) then
+        return lastIndexRead
+    elseif((nextVal <= currentTime) and (currentTime < nextnextVal)) then
+        return lastIndexRead+1
+    elseif(val > currentTime) then
         lastIndexRead = 1
     end
-    local iMin, iSup, pos, val= lastIndexRead, #noteEvents.time, 0, 0
-    
+
+    local iMin, iSup, pos= lastIndexRead, #noteEvents.time, 0
     while (iMin <= iSup) do
         pos = math.floor((iMin + iSup)/2)
         val, nextVal = noteEvents.time[pos], (noteEvents.time[pos+1] or noteEvents.time[pos]*2)
@@ -117,47 +124,6 @@ function M.playLatestNote(currentTime, noteEvents, lastIndexRead)
     local index = M.findLatestNote(currentTime, noteEvents, lastIndexRead)
     local sustain, sustNorm, isPressed = M.playNote(currentTime, noteEvents, index)
     return index, sustain, sustNorm, isPressed
-end
-
----@param pathMidi string   Decode MIDI file at the path, stores it in a cache only once. Will not read if cache already exists.
----@param resetThis int     Deletes the cache to re-read the MIDI file.
-function M.saveCacheMidi(pathMidi, resetThis)
-    if(resetThis == 1) then
-        Akto.MidiToAnimator.CacheMidi[pathMidi] = nil
-    end
-
-    if(not (Akto.MidiToAnimator.CacheMidi[pathMidi])) then
-        Akto.MidiToAnimator.CacheMidi[pathMidi] = Akto.MidiToAnalyzer.midiToRhythm(pathMidi)
-        debug_print("Scanned MIDI at: "..pathMidi)
-    end
-end 
-
-function M.saveCacheLatestNote(currentTime, noteEvents, lastIndexRead, path)
-    if((not path) or path == "") then
-        path = obj.layer
-    else
-        M.CacheLayer.path[obj.layer] = path
-    end
-    if(not (M.CacheNotePress[path])) then
-        M.CacheNotePress[path] = { index = 1, sustain = 0, sustNorm = 0, isPressed = false}
-    end
-    local a,b,c,d = M.playLatestNote(currentTime, noteEvents, lastIndexRead)
-    M.CacheNotePress[path].index = a
-    M.CacheNotePress[path].sustain = b
-    M.CacheNotePress[path].sustNorm = c
-    M.CacheNotePress[path].isPressed = d
-end
-
-function M.loadCacheLatestNote(path)
-    if((not path) or path == "") then
-        path = M.CacheLayer.path[obj.layer]
-    end
-    local N = M.CacheNotePress[path]
-    if(not N) then
-        obj.load("text", "selected MIDI is not loaded!\n選択したMIDIが読み込まれていません！")
-        N = {index = 0, sustain = 0, sustNorm = 0, isPressed = false}
-    end
-    return N.index, N.sustain, N.sustNorm, N.isPressed
 end
 
 return M

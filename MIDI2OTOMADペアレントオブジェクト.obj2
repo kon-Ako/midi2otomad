@@ -8,13 +8,15 @@ _G.Akto = _G.Akto or {}
 if(resetThis==1) then
     package.loaded["library_M2O/midi2Analyzer"] = nil
     package.loaded["library_M2O/midi2Animator"] = nil
+    package.loaded["library_M2O/midi2Otomad"]   = nil
     debug_print("Resetting MIDI2Otomad")
 end
-Akto.MidiToAnalyzer = require("library_M2O/midi2Analyzer")
-Akto.MidiToAnimator = require("library_M2O/midi2Animator")
 
-local M = Akto.MidiToAnimator
-local L = Akto.MidiToAnalyzer
+Akto.MidiToOtomad   = require("library_M2O/midi2Otomad")
+
+local O = Akto.MidiToOtomad
+local M = O.MidiToAnimator
+local L = O.MidiToAnalyzer
 
 --Execute every frame
 
@@ -30,5 +32,3 @@ M.curBeat   = M.toBeat(obj.time+framePlus/obj.framerate)+ M.mesPlus*M.metre
 M.curMes    = M.curBeat/M.metre
 M.furBeat   = math.floor(M.curBeat)
 M.furMes    = math.floor(M.curMes)
-
-return M
