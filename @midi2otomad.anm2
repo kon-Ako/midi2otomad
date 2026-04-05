@@ -1,8 +1,8 @@
-@事前実行環境でペアレントオブジェクト化A
+@下のフィルタを事前実行
 
 obj.effect()
 
-@事前実行環境でペアレントオブジェクト化B
+@事前実行環境でペアレントオブジェクト化
 --track@BPM:BPM,30,240,160,1
 --track@mesPlus:開始小節,-240,240,0,1
 --track@framePlus:フレームズレ,-120,120,0,1
@@ -38,7 +38,7 @@ M.curMes    = M.curBeat/M.metre
 M.furBeat   = math.floor(M.curBeat)
 M.furMes    = math.floor(M.curMes)
 
-@MIDI2音MAD化
+@MIDI2OTOMAD化
 --file@pathMidi:MIDIファイル
 --check@isDebug:デバッグ,false
 
@@ -62,7 +62,23 @@ if(isDebug) then
     obj.load("text", aa.." has "..arr.time[aa].."\nPlaying now: "..ab.."\nCompleted: "..ac.."\nand is "..ae)
 end
 
-@音MAD基本反転
+@仮想バッファに描画して読み込み
+--track@width:サイズW,0,8000,100,1
+--track@height:サイズH,0,8000,100,1
+
+local O = Akto.MidiToOtomad
+local M = O.MidiToAnimator
+local L = O.MidiToAnalyzer
+
+width = ((width == 0) and obj.w) or width
+height = ((height == 0) and obj.h) or height
+
+obj.setoption("drawtarget", "tempbuffer", width, height)
+obj.draw(obj.ox, obj.oy, obj.oz, O.CacheMisc.zoom[obj.layer], obj.alpha, obj.rx, obj.ry, obj.rz)
+obj.load("tempbuffer")
+obj.setoption("drawtarget", "framebuffer")
+
+@M2O基本反転
 --check@byGrid:軸回転式,false
 --track@delayIndex:カウントずらし,0,1,0,1
 --check@vertical:上下反転,0
@@ -92,7 +108,7 @@ else
 end
 
 
-@音MAD基本移動
+@M2O基本移動
 --track@x:X,-5000,5000,0,0.01
 --track@y:Y,-5000,5000,0,0.01
 --track@delayIndex:カウントずらし,-100,100,0,1
@@ -118,7 +134,7 @@ local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim), 
 obj.ox = obj.ox + x*progress*sign
 obj.oy = obj.oy + y*progress*sign
 
-@音MAD基本拡大
+@M2O基本拡大
 --track@zoom:拡大率,0,800,200,0.01
 --track@delayIndex:カウントずらし,-100,100,0,1
 --select@easing:イージング=1,直線=1,∧三角波=2,二次関数イン=3,二次関数アウト=4,∧二次関数往復=5,三次関数イン=6,三次関数アウト=7,∧三次関数往復=8,多項式イン=9,多項式アウト=10,∧多項式往復=11,指数関数イン=12,指数関数アウト=13,∧指数関数往復=14,サインイン=15,コサインアウト=16,サイン往復=17
@@ -144,7 +160,7 @@ obj.zoom = obj.zoom*(1+progress*sign*(zoom-100)/100)
 -- idk why but obj.zoom resets with every filter, but is displayed if not obj.draw()ed
 O.CacheMisc.zoom[obj.layer] = obj.zoom
 
-@音MADステップ回転
+@M2Oステップ回転
 --track@divisions:分割,1,64,4,1
 --track@delayIndex:カウントずらし,-100,100,0,1
 --select@easing:イージング=1,直線=1,∧三角波=2,二次関数イン=3,二次関数アウト=4,∧二次関数往復=5,三次関数イン=6,三次関数アウト=7,∧三次関数往復=8,多項式イン=9,多項式アウト=10,∧多項式往復=11,指数関数イン=12,指数関数アウト=13,∧指数関数往復=14,サインイン=15,コサインアウト=16,サイン往復=17
@@ -168,7 +184,7 @@ local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim), 
 
 obj.rz = obj.rz + sign*((360/divisions*(a-1))%360 - 360/divisions*progress)
 
-@音MADラスター
+@M2Oラスター
 --track@width:横幅,0,2000,100,1
 --track@height:高さ,0,2000,100,1
 --track@interval:周期,-40,40,1,0.01
@@ -198,18 +214,4 @@ obj.effect("ラスター",
 "縦ラスター",(vertical+isAlternating*a)%2,
 "ランダム振幅",randomW)
 
-@仮想バッファに描画して読み込み
---track@width:サイズW,0,8000,100,1
---track@height:サイズH,0,8000,100,1
-
-local O = Akto.MidiToOtomad
-local M = O.MidiToAnimator
-local L = O.MidiToAnalyzer
-
-width = ((width == 0) and obj.w) or width
-height = ((height == 0) and obj.h) or height
-
-obj.setoption("drawtarget", "tempbuffer", width, height)
-obj.draw(obj.ox, obj.oy, obj.oz, O.CacheMisc.zoom[obj.layer], obj.alpha, obj.rx, obj.ry, obj.rz)
-obj.load("tempbuffer")
-obj.setoption("drawtarget", "framebuffer")
+@M2O色調補正

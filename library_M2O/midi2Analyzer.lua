@@ -2,6 +2,15 @@ debug_print("Loading midi2Analyzer.lua")
 
 local L = {}
 
+---comment
+---@param table table           table to decipher
+---@param isShowTypes? boolean  whether to show the type of value instead of the value itself
+---@param strH? string          Starting statement
+---@param str1? string
+---@param str2? string
+---@param str3? string
+---@param strT? string          Final statement
+---@return string str
 function L.writeTableContents(table, isShowTypes, strH, str1, str2, str3, strT)
     strH = strH or "Contents are: "
     str1 = str1 or "\n"
@@ -57,8 +66,8 @@ L.noteNames = {"C-1", "C#-1", "D-1", "D#-1", "E-1", "F-1", "F#-1", "G-1", "G#-1"
 "C9", "C#9", "D9", "D#9", "E9", "F9", "F#9", "G9", getName = function(thisAr, index) return thisAr[index+1] end
 }
 
----@return int      the number read
----@return int      the index after the read bytes
+---@return integer      number read
+---@return integer      index after the read bytes
 function L.readByte(string, start, len)
     local num = 0
     for i=0, len-1 do
@@ -71,10 +80,10 @@ function L.isVLQ(num)
     return (false or (num>=128)), num%128
 end
 
----@param string String     string of binary
----@param start int         the starting index to read from
----@return int              the result as int
----@return int              the index after the VLQ as int
+---@param string string     string of binary
+---@param start integer     the starting index to read from
+---@return integer binary   The binary number read
+---@return integer index    index after the VLQ
 function L.readVLQ(string, start)
     local bool, num, digit = true, 0, 0
     while (bool) do
@@ -85,8 +94,8 @@ function L.readVLQ(string, start)
     return num, start
 end
 
----@param path String   the path of MIDI to read.   MIDIのファイルパス
----@return String       MIDI as string of binary.   迫真!バイナリのStringと化したMIDI先輩
+---@param pathMidi string   the path of MIDI to read.   MIDIのファイルパス
+---@return string strMIDI   MIDI as string of binary.   迫真!バイナリのStringと化したMIDI先輩
 function L.midiOpenAsString(pathMidi)
     local str = ""
     local file = assert(io.open(pathMidi, "rb"))
@@ -106,8 +115,24 @@ function L.midiOpenAsString(pathMidi)
     return str
 end
 
----@param string String     MIDI as string of binary.       迫真!バイナリのStringと化したMIDI先輩
----@return dictionary       MIDI deconstructed into table.  テーブルとして解体したMIDI
+---@class NoteEventsRaw         List of note events. Each index corresponds to each note event.
+---@field track table           integer, the track the event is in
+---@field deltaTime table       integer, the tick the event occurs since last event started
+---@field absoluteTime table    integer, the tick the event occurs since the beginning of track
+---@field status table          integer, the status of event
+---@field channel table         integer, the channel the event is in
+---@field note table            integer, the pitch of note event
+---@field velocity table        integer, the velocity of note event
+
+---@class MidiDecoded           NoteEventsRaw wrapped around other information of the MIDI.
+---@field midiFormat integer    Format of MIDI. 0,1, or 2
+---@field numTrack integer      Numbers of tracks loaded in MIDI
+---@field isSMPTETime boolean   Whether the MIDI uses SMPTE time, which isn't supported by script.
+---@field raw NoteEventsRaw     The meat of the table.
+---@field totalEvents integer   total of events recorded in raw.
+
+---@param string string         MIDI as string of binary.       迫真!バイナリのStringと化したMIDI先輩
+---@return MidiDecoded tblMIDI  MIDI deconstructed into table.  テーブルとして解体したMIDI
 function L.midiDecode(string)
     local dict = {}
     local currentSize = string:byte(7)*256 + string:byte(8)
@@ -115,7 +140,7 @@ function L.midiDecode(string)
     local pos = currentSize + 9
     local currentData = 0
     local cumulativeTime = 0
-    local beganMtrk = 0
+    local beganMtrk = 0 --the byte where currently reading track began, to make sure we don't overshoot
     local runningStatus = 0x90
     local systemEventLength = 0
     local metaType = 0
@@ -193,13 +218,24 @@ function L.midiDecode(string)
     return dict
 end
 
----@param dict dictionary   MIDI deconstructed into table.  テーブルとして解体したMIDI
----@return dictionary       dictionary of note events easily read by player
+---@class MidiNotes             lists of list of notes easily calculated by Animator    MIDIの音符の一覧。簡単に計算できる
+---@field time table            start time of each note in events
+---@field length table          the length of each note is in events
+---@field track table           the track each note is in
+---@field channel table         the channel each note is in
+---@field note table            the pitch of each note
+---@field notename table        (unimplemented) name of above
+---@field velocity table        the velocity of each note
+---@field trackEndTime table    length of each track; indices correspond to (track_number + 1) instead.
+---@field loopAt integer        the largest value in trackEndTime
+
+---@param dict MidiDecoded  MIDI deconstructed into table.  テーブルとして解体したMIDI
+---@return MidiNotes noteD  lists of list of notes easily calculated by Animator    MIDIの音符の一覧。簡単に計算できる
 function L.midiNoteDecode(dict)
     local noteD= { time = {}, length = {}, track = {}, channel = {}, note = {}, notename = {}, velocity = {}, trackEndTime = {}, loopAt = 1}
     local R = dict.raw
     local ind, finishInd = 1, 1
-    local activeNotes = {}
+    local activeNotes = {} --temporary lists for notes that are started (eventType == 9) yet not ended (eventType == 8)
     local eventType, curTk, curCh, curNt, curVl, curAT, key = 9, 0, 0, 0, 0, 0, ""
 
     for k,v in ipairs(R.status) do
@@ -230,7 +266,7 @@ function L.midiNoteDecode(dict)
             end
         elseif(eventType == 0xF) then
             if((v == 0xFF) and curNt == 0x2F) then
-                noteD.trackEndTime[curTk] = curAT
+                noteD.trackEndTime[curTk+1] = curAT
             end
         end
 
@@ -243,9 +279,8 @@ function L.midiNoteDecode(dict)
     return noteD
 end
 
-
 ---@param pathMidi string   the file path for MIDI to load 読み込むMIDIのファイルパス
----@return dictionary       data of rhythm that Lua could easily interpret  抽出したデータをわかりやすく作り直したもの。
+---@return MidiNotes rym    data of rhythm that we could easily interpret  抽出したデータをわかりやすく作り直したもの。
 function L.midiToRhythm(pathMidi)
     local dict = {}
     local rym = {}

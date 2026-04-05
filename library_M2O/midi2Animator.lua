@@ -9,6 +9,9 @@ M.CacheNotePress    = {}
 M.CacheLayer        = {path = {}}
 M.CacheMisc         = {zoom = {}}
 
+M.CacheMidi.sample = {}
+
+
 --Default values
 
 M.scriptPath = "C:\\ProgramData\\aviutl2\\Script\\midi2otomad"
@@ -25,6 +28,7 @@ M.curMes    = 0
 M.furBeat   = 0
 M.furMes    = 0
 
+--List of easing functions
 ---@param x number      [0,1] of animation, starting at 0 and ending at 1
 ---@param amp number    Amplitude used in some of easing
 ---@return number       [0,1] eased to appropraiate function. If index%3 is 2, it is a bounce: achieves 1 at middle and 0 at either end.
@@ -65,15 +69,15 @@ M.ease = {
     [17] = function(x, amp) return math.sin(x*math.pi) end
 }
 
----@param time timeSecond
----@return timeBeat
+---@param time number   time in seconds
+---@return number       time in beats
 function M.toBeat(time)
     return time*M.bpm/60
 end
 
 -- inverse
----@param time timeBeat
----@return timeSecond
+---@param time number   time in beats
+---@return number       time in seconds
 function M.unBeat(time)
     return time*60/M.bpm
 end
@@ -84,6 +88,10 @@ function M.sign(num)
     return (num>0) and 1 or ((num<0) and -1 or 0)
 end
 
+---@param currentTime number    time in beats
+---@param noteEvents table      table of note events, decoded
+---@param lastIndexRead? number index to start calculation from
+---@return number pos           the latest note
 function M.findLatestNote(currentTime, noteEvents, lastIndexRead)
     lastIndexRead = lastIndexRead or 1
 
@@ -113,17 +121,41 @@ function M.findLatestNote(currentTime, noteEvents, lastIndexRead)
     return pos
 end
 
-function M.playNote(currentTime, noteEvents, index)
-    local sustain = currentTime - noteEvents.time[index]
-    local sustNorm = sustain/noteEvents.length[index]
-    local isPressed = sustNorm <= 1
-    return sustain, sustNorm, isPressed
+--Pool for playNote()
+M.bufferNote = {
+    index = 1,
+    sustain = 0,
+    sustNorm = 0,
+    wasPressed = false,
+    wasReleased = false,
+    isPressed = false
+}
+local buffer = M.bufferNote
+
+---@param currentTime number    time in beats
+---@param noteEvents table      table of note events, decoded
+---@param index integer         index to play
+---@param buffer? table         the buffer table to store value; default to the one above
+---@return number sustain       time since the note started in beats. negative if it is upcoming note.
+---@return number sustainNorm   normalized sustain
+---@return boolean isPressed    whether the note is currently active or not
+---@return boolean wasPressed   whether the note was ever active
+---@return boolean wasReleased  whether the note has ended being pressed
+function M.playNote(currentTime, noteEvents, index, buffer)
+    buffer = buffer or M.bufferNote
+    buffer.sustain = currentTime - noteEvents.time[index]
+    buffer.sustNorm = buffer.sustain/noteEvents.length[index]
+    buffer.wasPressed = (buffer.sustNorm >= 0)
+    buffer.wasReleased = (buffer.sustNorm >= 1)
+    buffer.isPressed = (not buffer.wasReleased) and buffer.wasPressed
+    return buffer.sustain, buffer.sustNorm, buffer.isPressed, buffer.wasPressed, buffer.wasReleased
 end
 
-function M.playLatestNote(currentTime, noteEvents, lastIndexRead)
-    local index = M.findLatestNote(currentTime, noteEvents, lastIndexRead)
-    local sustain, sustNorm, isPressed = M.playNote(currentTime, noteEvents, index)
-    return index, sustain, sustNorm, isPressed
+function M.playLatestNote(currentTime, noteEvents, lastIndexRead, buffer)
+    buffer = buffer or M.bufferNote
+    buffer.index = M.findLatestNote(currentTime, noteEvents, lastIndexRead)
+    M.playNote(currentTime, noteEvents, index, buffer)
+    return buffer.index, buffer.sustain, buffer.sustNorm, buffer.isPressed, buffer.wasPressed, buffer.wasReleased
 end
 
 return M
