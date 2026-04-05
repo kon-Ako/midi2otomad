@@ -66,8 +66,14 @@ L.noteNames = {"C-1", "C#-1", "D-1", "D#-1", "E-1", "F-1", "F#-1", "G-1", "G#-1"
 "C9", "C#9", "D9", "D#9", "E9", "F9", "F#9", "G9", getName = function(thisAr, index) return thisAr[index+1] end
 }
 
----@return integer      number read
----@return integer      index after the read bytes
+---@alias bytesAsString string  The string read with io.open from MIDI file.
+
+---Read the string as byte
+---@param string bytesAsString  the string to read as if it is list of bytes
+---@param start integer         the index to start reading
+---@param len integer           the length of bytes read
+---@return integer byte         number read
+---@return integer index        index after the read bytes
 function L.readByte(string, start, len)
     local num = 0
     for i=0, len-1 do
@@ -76,14 +82,19 @@ function L.readByte(string, start, len)
     return num, start + len
 end
 
+---Determines whether the number is Variable Length Quantity
+---@param num integer       the number to read
+---@return boolean isVLQ    whether it is VLQ or not
+---@return integer value    the value interpreted as VLQ
 function L.isVLQ(num)
     return (false or (num>=128)), num%128
 end
 
----@param string string     string of binary
----@param start integer     the starting index to read from
----@return integer binary   The binary number read
----@return integer index    index after the VLQ
+---Given the position is VLQ, reads the byte until it is not VLQ.
+---@param string bytesAsString  string of binary
+---@param start integer         the starting index to read from
+---@return integer binary       The binary number read
+---@return integer index        index after the datas that are combined as VLQ
 function L.readVLQ(string, start)
     local bool, num, digit = true, 0, 0
     while (bool) do
@@ -94,8 +105,8 @@ function L.readVLQ(string, start)
     return num, start
 end
 
----@param pathMidi string   the path of MIDI to read.   MIDIのファイルパス
----@return string strMIDI   MIDI as string of binary.   迫真!バイナリのStringと化したMIDI先輩
+---@param pathMidi string           the path of MIDI to read.   MIDIのファイルパス
+---@return bytesAsString strMIDI    MIDI as string of binary.   迫真!バイナリのStringと化したMIDI先輩
 function L.midiOpenAsString(pathMidi)
     local str = ""
     local file = assert(io.open(pathMidi, "rb"))
@@ -131,7 +142,8 @@ end
 ---@field raw NoteEventsRaw     The meat of the table.
 ---@field totalEvents integer   total of events recorded in raw.
 
----@param string string         MIDI as string of binary.       迫真!バイナリのStringと化したMIDI先輩
+---Decode string extracted from MIDI into table of note events. 
+---@param string bytesAsString  MIDI as string of binary.       迫真!バイナリのStringと化したMIDI先輩
 ---@return MidiDecoded tblMIDI  MIDI deconstructed into table.  テーブルとして解体したMIDI
 function L.midiDecode(string)
     local dict = {}
@@ -279,8 +291,8 @@ function L.midiNoteDecode(dict)
     return noteD
 end
 
----@param pathMidi string   the file path for MIDI to load 読み込むMIDIのファイルパス
----@return MidiNotes rym    data of rhythm that we could easily interpret  抽出したデータをわかりやすく作り直したもの。
+---@param pathMidi bytesAsString    the file path for MIDI to load 読み込むMIDIのファイルパス
+---@return MidiNotes rym            data of rhythm that we could easily interpret  抽出したデータをわかりやすく作り直したもの。
 function L.midiToRhythm(pathMidi)
     local dict = {}
     local rym = {}
