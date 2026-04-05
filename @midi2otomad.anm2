@@ -112,7 +112,8 @@ local a,b,c,d = O.loadCacheLatestNote(pathMidi)
 a = a + delayIndex
 local sign = 1-2*(isAlternating*a%2)
 local anim = isNorm and c or b
-local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim/length), amplitude))
+anim = (length == 0) and 1 or anim/length --if length is 0, finish immediately; else, anim is squished by length
+local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim), amplitude))
 
 obj.ox = obj.ox + x*progress*sign
 obj.oy = obj.oy + y*progress*sign
@@ -136,7 +137,8 @@ local a,b,c,d = O.loadCacheLatestNote(pathMidi)
 a = a + delayIndex
 local sign = 1-2*(isAlternating*a%2)
 local anim = isNorm and c or b
-local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim/length), amplitude))
+anim = (length == 0) and 1 or anim/length --if length is 0, finish immediately; else, anim is squished by length
+local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim), amplitude))
 
 obj.zoom = obj.zoom*(1+progress*sign*(zoom-100)/100)
 -- idk why but obj.zoom resets with every filter, but is displayed if not obj.draw()ed
@@ -161,7 +163,8 @@ local a,b,c,d = O.loadCacheLatestNote(pathMidi)
 a = a + delayIndex
 local sign = 1-2*(isCounterClockwise)
 local anim = isNorm and c or b
-local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim/length), amplitude))
+anim = (length == 0) and 1 or anim/length --if length is 0, finish immediately; else, anim is squished by length
+local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim), amplitude))
 
 obj.rz = obj.rz + sign*((360/divisions*(a-1))%360 - 360/divisions*progress)
 
@@ -185,7 +188,8 @@ local L = O.MidiToAnalyzer
 
 local a,b,c,d = O.loadCacheLatestNote(pathMidi)
 local anim = isNorm and c or b
-local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim/length), amplitude))
+anim = (length == 0) and 1 or anim/length --if length is 0, finish immediately; else, anim is squished by length
+local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim), amplitude))
 
 obj.effect("ラスター",
 "横幅",width*progress,
@@ -194,7 +198,7 @@ obj.effect("ラスター",
 "縦ラスター",(vertical+isAlternating*a)%2,
 "ランダム振幅",randomW)
 
-@仮想バッファに描画
+@仮想バッファに描画して読み込み
 --track@width:サイズW,0,8000,100,1
 --track@height:サイズH,0,8000,100,1
 
@@ -202,10 +206,8 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-if(width == 0 or height == 0) then
-    width = obj.w
-    height = obj.h
-end
+width = ((width == 0) and obj.w) or width
+height = ((height == 0) and obj.h) or height
 
 obj.setoption("drawtarget", "tempbuffer", width, height)
 obj.draw(obj.ox, obj.oy, obj.oz, O.CacheMisc.zoom[obj.layer], obj.alpha, obj.rx, obj.ry, obj.rz)

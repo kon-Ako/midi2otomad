@@ -34,6 +34,51 @@ end
 
 obj.load("text", str)
 
+@MIDIの追加読み込み&音符表示
+--font@font:フォント名,MS UI Gothic
+--track@size:サイズ,8,400,48
+--file@pathMidi:MIDIファイル
+--check@resetThis:再読み込み,0
+--check@showNoteEvent:表示,0
+
+local O = Akto.MidiToOtomad
+local M = O.MidiToAnimator
+local L = O.MidiToAnalyzer
+local arr = {}
+
+obj.setfont(font, size, 3)
+
+if(not O) then
+    obj.load("text","ERROR\n起動オブジェクトが存在しません！\nBoot Object doesn't exist!")
+else
+    if(pathMidi == "") then
+        pathMidi = M.scriptPath.."test.MID"
+    end
+
+    O.saveCacheMidi(pathMidi, resetThis)
+    arr = O.CacheMidi[pathMidi]
+    O.saveCacheLatestNote(M.curBeat, arr, pathMidi)
+
+    if(showNoteEvent == 1 ) then
+        local C = O.CacheMidi[pathMidi]
+        local str = pathMidi.."の解析結果:".."\nLoops At: "..C.loopAt
+        str = str.."\ntime, length, note, velocity, channel, track"
+
+        for i=1, #(C.time) do
+            str = str.."\n"..i..": "
+            str = str..(math.floor(100*C.time[i])/100)..", "
+            str = str..(math.floor(100*C.length[i])/100)..", "
+            str = str..C.note[i]..", "
+            str = str..C.velocity[i]..", "
+            str = str..C.channel[i]..", "
+            str = str..C.track[i]..", "
+        end
+
+        str = str.."\n以上。"
+        obj.load("text", str)
+    end
+end
+
 @画像音MAD
 --file@pathObj:画像
 --file@pathMidi:MIDIファイル
