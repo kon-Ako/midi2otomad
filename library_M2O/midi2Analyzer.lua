@@ -2,6 +2,7 @@ debug_print("Loading midi2Analyzer.lua")
 
 local L = {}
 
+
 ---comment
 ---@param table table           table to decipher
 ---@param isShowTypes? boolean  whether to show the type of value instead of the value itself
@@ -63,8 +64,14 @@ L.noteNames = {"C-1", "C#-1", "D-1", "D#-1", "E-1", "F-1", "F#-1", "G-1", "G#-1"
 "C6", "C#6", "D6", "D#6", "E6", "F6", "F#6", "G6", "G#6", "A6", "A#6", "B6", 
 "C7", "C#7", "D7", "D#7", "E7", "F7", "F#7", "G7", "G#7", "A7", "A#7", "B7", 
 "C8", "C#8", "D8", "D#8", "E8", "F8", "F#8", "G8", "G#8", "A8", "A#8", "B8", 
-"C9", "C#9", "D9", "D#9", "E9", "F9", "F#9", "G9", getName = function(thisAr, index) return thisAr[index+1] end
+"C9", "C#9", "D9", "D#9", "E9", "F9", "F#9", "G9"
 }
+---Get note name
+---@param note integer      The pitch
+---@return string noteName  The pitch as string
+function L.noteNames:getNoteName(note)
+    return (self[index%128+1])
+end
 
 ---@alias bytesAsString string  The string read with io.open from MIDI file.
 
@@ -126,7 +133,10 @@ function L.midiOpenAsString(pathMidi)
     return str
 end
 
----@class NoteEventsRaw         List of note events. Each index corresponds to each note event.
+---@class MidiDecoded           NoteEventsRaw wrapped around other information of the MIDI.
+---@field midiFormat integer    Format of MIDI. 0,1, or 2
+---@field numTrack integer      Numbers of tracks loaded in MIDI
+---@field isSMPTETime boolean   Whether the MIDI uses SMPTE time, which isn't supported by script.
 ---@field track table           integer, the track the event is in
 ---@field deltaTime table       integer, the tick the event occurs since last event started
 ---@field absoluteTime table    integer, the tick the event occurs since the beginning of track
@@ -134,27 +144,18 @@ end
 ---@field channel table         integer, the channel the event is in
 ---@field note table            integer, the pitch of note event
 ---@field velocity table        integer, the velocity of note event
-L.bufferNoteEventsRaw = {
+---@field totalEvents integer   total of events recorded in raw.
+L.bufferMidiDecoded = {
+    midiFormat = 0,
+    numTrack = 1,
+    isSMPTETime = false,
     track = {},
     deltaTime = {},
     absoluteTime = {},
     status = {},
     channel = {},
     note = {},
-    velocity = {}
-}
-
----@class MidiDecoded           NoteEventsRaw wrapped around other information of the MIDI.
----@field midiFormat integer    Format of MIDI. 0,1, or 2
----@field numTrack integer      Numbers of tracks loaded in MIDI
----@field isSMPTETime boolean   Whether the MIDI uses SMPTE time, which isn't supported by script.
----@field raw NoteEventsRaw     The meat of the table.
----@field totalEvents integer   total of events recorded in raw.
-L.bufferMidiDecoded = {
-    midiFormat = 0,
-    numTrack = 1,
-    isSMPTETime = false,
-    raw = L.bufferNoteEventsRaw,
+    velocity = {},
     totalEvents = 16
 }
 
@@ -177,7 +178,13 @@ function L.midiDecode(string)
     dict.isSMPTETime = (bit.rshift(string:byte(13), 7) == 1)
     dict.ppq = string:byte(13)*256 + string:byte(14)
 
-    dict.raw = {track = {}, deltaTime = {}, absoluteTime = {}, status = {}, channel = {}, note = {}, velocity = {}}
+    dict.track = {}
+    dict.deltaTime = {}
+    dict.absoluteTime = {}
+    dict.status = {}
+    dict.channel = {}
+    dict.note = {}
+    dict.velocity = {}
 
     for trackIndex=0, dict.numTrack-1 do
         debug_print("Reading track # "..trackIndex)
@@ -190,49 +197,49 @@ function L.midiDecode(string)
         currentSize, pos  = L.readByte(string, pos+4, 4)
         beganMtrk = pos - 1
         while(pos < currentSize + beganMtrk) do
-            dict.raw.track[curIndx] = trackIndex
+            dict.track[curIndx] = trackIndex
             --Record Delta Time
             currentData, pos = L.readVLQ(string, pos)
             cumulativeTime = cumulativeTime + currentData
-            dict.raw.deltaTime[curIndx] = currentData
-            dict.raw.absoluteTime[curIndx] = cumulativeTime
+            dict.deltaTime[curIndx] = currentData
+            dict.absoluteTime[curIndx] = cumulativeTime
             --Record Status
             currentData = string:byte(pos)
             if(currentData >= 128) then
-                dict.raw.status[curIndx] = currentData
+                dict.status[curIndx] = currentData
                 runningStatus = currentData
                 pos = pos + 1
             else
-                dict.raw.status[curIndx] = runningStatus
+                dict.status[curIndx] = runningStatus
             end
 
-            if(dict.raw.status[curIndx] >= 0xC0 and dict.raw.status[curIndx] < 0xE0) then
+            if(dict.status[curIndx] >= 0xC0 and dict.status[curIndx] < 0xE0) then
                 --Execute analysis on Program Change / Channel Aftertouch
-                dict.raw.channel[curIndx] = (dict.raw.status[curIndx])%16
-                dict.raw.note[curIndx] = string:byte(pos)
+                dict.channel[curIndx] = (dict.status[curIndx])%16
+                dict.note[curIndx] = string:byte(pos)
                 pos = pos + 1
-            elseif(dict.raw.status[curIndx] < 0xF0) then
+            elseif(dict.status[curIndx] < 0xF0) then
                 --Execute analysis on Basic MIDI Note Event
                 --Record Channel
-                dict.raw.channel[curIndx] = (dict.raw.status[curIndx])%16
+                dict.channel[curIndx] = (dict.status[curIndx])%16
                 --Record Note
-                dict.raw.note[curIndx] = string:byte(pos)
+                dict.note[curIndx] = string:byte(pos)
                 pos = pos + 1
                 --Record Velocity
-                dict.raw.velocity[curIndx] = string:byte(pos)
+                dict.velocity[curIndx] = string:byte(pos)
                 pos = pos + 1
-            elseif(dict.raw.status[curIndx] < 0xFF) then
+            elseif(dict.status[curIndx] < 0xFF) then
                 --Execute analysis on Common System Event
                 systemEventLength, pos = L.readVLQ(string ,pos)
-                dict.raw.note[curIndx] = string:sub(pos, pos + systemEventLength - 1)
+                dict.note[curIndx] = string:sub(pos, pos + systemEventLength - 1)
                 pos = pos + systemEventLength
             else
                 --Execute analysis on Meta Event
                 metaType = string:byte(pos)
-                dict.raw.note[curIndx] = metaType
+                dict.note[curIndx] = metaType
                 pos = pos + 1
                 systemEventLength, pos = L.readVLQ(string ,pos)
-                dict.raw.velocity[curIndx] = string:sub(pos, pos + systemEventLength - 1)
+                dict.velocity[curIndx] = string:sub(pos, pos + systemEventLength - 1)
                 pos = pos + systemEventLength
             end
             curIndx = curIndx + 1
@@ -273,7 +280,7 @@ L.bufferMidiNotes = {
 ---@return MidiNotes noteD  lists of list of notes easily calculated by Animator    MIDIの音符の一覧。簡単に計算できる
 function L.midiNoteDecode(dict)
     local noteD= { time = {}, length = {}, track = {}, channel = {}, note = {}, notename = {}, velocity = {}, trackEndTime = {}, loopAt = 1}
-    local R = dict.raw
+    local R = dict
     local ind, finishInd = 1, 1
     local activeNotes = {} --temporary lists for notes that are started (eventType == 9) yet not ended (eventType == 8)
     local eventType, curTk, curCh, curNt, curVl, curAT, key = 9, 0, 0, 0, 0, 0, ""
