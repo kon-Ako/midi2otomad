@@ -134,6 +134,15 @@ end
 ---@field channel table         integer, the channel the event is in
 ---@field note table            integer, the pitch of note event
 ---@field velocity table        integer, the velocity of note event
+L.bufferNoteEventsRaw = {
+    track = {},
+    deltaTime = {},
+    absoluteTime = {},
+    status = {},
+    channel = {},
+    note = {},
+    velocity = {}
+}
 
 ---@class MidiDecoded           NoteEventsRaw wrapped around other information of the MIDI.
 ---@field midiFormat integer    Format of MIDI. 0,1, or 2
@@ -141,6 +150,13 @@ end
 ---@field isSMPTETime boolean   Whether the MIDI uses SMPTE time, which isn't supported by script.
 ---@field raw NoteEventsRaw     The meat of the table.
 ---@field totalEvents integer   total of events recorded in raw.
+L.bufferMidiDecoded = {
+    midiFormat = 0,
+    numTrack = 1,
+    isSMPTETime = false,
+    raw = L.bufferNoteEventsRaw,
+    totalEvents = 16
+}
 
 ---Decode string extracted from MIDI into table of note events. 
 ---@param string bytesAsString  MIDI as string of binary.       迫真!バイナリのStringと化したMIDI先輩
@@ -240,6 +256,18 @@ end
 ---@field velocity table        the velocity of each note
 ---@field trackEndTime table    length of each track; indices correspond to (track_number + 1) instead.
 ---@field loopAt integer        the largest value in trackEndTime
+L.bufferMidiNotes = {
+    time = {},
+    length = {},
+    track = {},
+    channel = {},
+    note = {},
+    notename = {},
+    velocity = {},
+    trackEndTime = {},
+    loopAt = 8
+}
+
 
 ---@param dict MidiDecoded  MIDI deconstructed into table.  テーブルとして解体したMIDI
 ---@return MidiNotes noteD  lists of list of notes easily calculated by Animator    MIDIの音符の一覧。簡単に計算できる

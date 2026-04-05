@@ -2,10 +2,10 @@
 --track@mesPlus:開始小節,-240,240,0,1
 --track@framePlus:フレームズレ,-120,120,0,1
 --track@metre:拍子,2,8,4,1
---check@resetThis:リセット,0
+--check@resetThis:リセット,false
 
 _G.Akto = _G.Akto or {}
-if(resetThis==1) then
+if(resetThis) then
     package.loaded["library_M2O/midi2Analyzer"] = nil
     package.loaded["library_M2O/midi2Animator"] = nil
     package.loaded["library_M2O/midi2Otomad"]   = nil

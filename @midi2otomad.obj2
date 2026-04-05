@@ -22,9 +22,9 @@ elseif(info == 1) then
     "Measure#: "..M.furMes.."\n"..
     "BPM:= "..M.bpm.." ; Metre:= "..M.metre.."/4".."\n"
 elseif(info == 2) then
-    str = L.writeTableContents(O.CacheMidi, true, "読み込み済み, Loaded MIDI: ", "\n", " exists as ", ".", "\nEND")
+    str = L.writeTableContents(O.cacheMidi, true, "読み込み済み, Loaded MIDI: ", "\n", " exists as ", ".", "\nEND")
 elseif(info == 3) then
-    arr = O.CacheMidi[pathMidi]
+    arr = O.cacheMidi[pathMidi]
     if(not arr) then
         str = "selected MIDI is not loaded!\n選択したMIDIが読み込まれていません！"
     else
@@ -56,11 +56,11 @@ else
     end
 
     O.saveCacheMidi(pathMidi, resetThis)
-    arr = O.CacheMidi[pathMidi]
-    O.saveCacheLatestNote(M.curBeat, arr, pathMidi)
+    arr = O.cacheMidi[pathMidi]
+    O.saveBufferLatestNote(M.curBeat, arr, pathMidi)
 
     if(showNoteEvent == 1 ) then
-        local C = O.CacheMidi[pathMidi]
+        local C = O.cacheMidi[pathMidi]
         local str = pathMidi.."の解析結果:".."\nLoops At: "..C.loopAt
         str = str.."\ntime, length, note, velocity, channel, track"
 
@@ -93,11 +93,11 @@ if(pathMidi == "") then
 end
 
 O.saveCacheMidi(pathMidi)
-local arr = O.CacheMidi[pathMidi]
-O.saveCacheLatestNote(M.curBeat, arr, pathMidi)
+local arr = O.cacheMidi[pathMidi]
+O.saveBufferLatestNote(M.curBeat, arr, pathMidi)
 
 if(isDebug) then
-    local aa, ab, ac, ad = O.CacheNotePress[obj.layer].index, O.CacheNotePress[obj.layer].sustain, O.CacheNotePress[obj.layer].sustNorm, O.CacheNotePress[obj.layer].isPressed
+    local aa, ab, ac, ad = O.bufferNotePress[obj.layer].index, O.bufferNotePress[obj.layer].sustain, O.bufferNotePress[obj.layer].sustNorm, O.bufferNotePress[obj.layer].isPressed
     ab = math.floor(ab*100)/100
     ac = math.floor(ac*100)/100
     local ae = ad and "T" or "F"
@@ -107,7 +107,7 @@ else
 end
 
 @動画音MAD
---file@pathObj:画像
+--file@pathObj:動画
 --file@pathMidi:MIDIファイル
 --track@startTime:再生位置,0,10000,0,0.01
 --track@playSpeed:再生速度,-2000,2000,100,0.01
@@ -122,10 +122,10 @@ if(pathMidi == "") then
 end
 
 O.saveCacheMidi(pathMidi)
-local arr = O.CacheMidi[pathMidi]
-O.saveCacheLatestNote(M.curBeat, arr, pathMidi)
+local arr = O.cacheMidi[pathMidi]
+O.saveBufferLatestNote(M.curBeat, arr, pathMidi)
 
-local index, sustain, sustNorm, isPressed = O.loadCacheLatestNote()
+local index, sustain, sustNorm, isPressed = O.loadBufferLatestNote()
 local vidLength = 0
 if(isDebug) then
     obj.load("text", index.." has "..arr.time[index].."\nPlaying now: "..sustain.."\nCompleted: "..sustNorm.."\nand is "..tostring(isPressed))

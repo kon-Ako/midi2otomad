@@ -51,11 +51,11 @@ if(pathMidi == "") then
 end
 
 O.saveCacheMidi(pathMidi)
-local arr = O.CacheMidi[pathMidi]
-O.saveCacheLatestNote(M.curBeat, arr, pathMidi)
+local arr = O.cacheMidi[pathMidi]
+O.saveBufferLatestNote(M.curBeat, arr, pathMidi)
 
 if(isDebug) then
-    local aa, ab, ac, ad = O.CacheNotePress[obj.layer].index, O.CacheNotePress[obj.layer].sustain, O.CacheNotePress[obj.layer].sustNorm, O.CacheNotePress[obj.layer].isPressed
+    local aa, ab, ac, ad = O.bufferNotePress[obj.layer].index, O.bufferNotePress[obj.layer].sustain, O.bufferNotePress[obj.layer].sustNorm, O.bufferNotePress[obj.layer].isPressed
     ab = math.floor(ab*100)/100
     ac = math.floor(ac*100)/100
     local ae = ad and "T" or "F"
@@ -74,7 +74,7 @@ width = ((width == 0) and obj.w) or width
 height = ((height == 0) and obj.h) or height
 
 obj.setoption("drawtarget", "tempbuffer", width, height)
-obj.draw(obj.ox, obj.oy, obj.oz, O.CacheMisc.zoom[obj.layer], obj.alpha, obj.rx, obj.ry, obj.rz)
+obj.draw(obj.ox, obj.oy, obj.oz, O.bufferMisc.zoom[obj.layer], obj.alpha, obj.rx, obj.ry, obj.rz)
 obj.load("tempbuffer")
 obj.setoption("drawtarget", "framebuffer")
 
@@ -92,7 +92,7 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local a,b,c,d = O.loadCacheLatestNote()
+local a,b,c,d = O.loadBufferLatestNote()
 a = (a+delayIndex)%2
 if(byGrid) then
     obj.rx=180*a*vertical
@@ -124,7 +124,7 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local a,b,c,d = O.loadCacheLatestNote(pathMidi)
+local a,b,c,d = O.loadBufferLatestNote(pathMidi)
 a = a + delayIndex
 local sign = 1-2*(isAlternating*a%2)
 local anim = isNorm and c or b
@@ -149,7 +149,7 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local a,b,c,d = O.loadCacheLatestNote(pathMidi)
+local a,b,c,d = O.loadBufferLatestNote(pathMidi)
 a = a + delayIndex
 local sign = 1-2*(isAlternating*a%2)
 local anim = isNorm and c or b
@@ -158,7 +158,7 @@ local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim), 
 
 obj.zoom = obj.zoom*(1+progress*sign*(zoom-100)/100)
 -- idk why but obj.zoom resets with every filter, but is displayed if not obj.draw()ed
-O.CacheMisc.zoom[obj.layer] = obj.zoom
+O.bufferMisc.zoom[obj.layer] = obj.zoom
 
 @M2Oステップ回転
 --track@divisions:分割,1,64,4,1
@@ -175,7 +175,7 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local a,b,c,d = O.loadCacheLatestNote(pathMidi)
+local a,b,c,d = O.loadBufferLatestNote(pathMidi)
 a = a + delayIndex
 local sign = 1-2*(isCounterClockwise)
 local anim = isNorm and c or b
@@ -202,7 +202,7 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local a,b,c,d = O.loadCacheLatestNote(pathMidi)
+local a,b,c,d = O.loadBufferLatestNote(pathMidi)
 local anim = isNorm and c or b
 anim = (length == 0) and 1 or anim/length --if length is 0, finish immediately; else, anim is squished by length
 local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim), amplitude))
