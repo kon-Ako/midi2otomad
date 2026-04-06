@@ -2,50 +2,121 @@ debug_print("Loading midi2Analyzer.lua")
 
 local L = {}
 
+---@alias bytesAsString string  The string read with io.open from MIDI file.
 
----comment
+---@class ParsedNoteEvents           
+---@field midiFormat integer    Format of MIDI. 0,1, or 2
+---@field numTrack integer      Numbers of tracks loaded in MIDI
+---@field isSMPTETime boolean   Whether the MIDI uses SMPTE time, which isn't supported by script.
+---@field track table           integer, the track the event is in
+---@field deltaTime table       integer, the tick the event occurs since last event started
+---@field absoluteTime table    integer, the tick the event occurs since the beginning of track
+---@field status table          integer, the status of event
+---@field channel table         integer, the channel the event is in
+---@field note table            integer, the pitch of note event
+---@field velocity table        integer, the velocity of note event
+---@field totalEvents integer   total of events recorded in raw.
+L.ParsedNoteEvents = {
+    midiFormat = 0,
+    numTrack = 1,
+    isSMPTETime = false,
+    track = {},
+    deltaTime = {},
+    absoluteTime = {},
+    status = {},
+    channel = {},
+    note = {},
+    velocity = {},
+    totalEvents = 16
+}
+L.ParsedNoteEvents.__index = L.ParsedNoteEvents
+
+---Creates new ParsedNoteEvents.
+---@param instance? table               If given, turns that table into ParsedNoteEvents instead of making new one
+---@return ParsedNoteEvents instance    ParsedNoteEvents with default values
+function L.ParsedNoteEvents:new(instance)
+    instance = instance or {}
+    setmetatable(instance, self)
+    instance.midiFormat = 0
+    instance.numTrack = 1
+    instance.isSMPTETime = false
+    instance.track = {}
+    instance.deltaTime = {}
+    instance.absoluteTime = {}
+    instance.status = {}
+    instance.channel = {}
+    instance.note = {}
+    instance.velocity = {}
+    instance.totalEvents = 16
+    return instance
+end
+
+---@class MidiNotes             lists of list of notes easily calculated by Animator    MIDIの音符の一覧。簡単に計算できる
+---@field time table            start time of each note in events
+---@field length table          the length of each note is in events
+---@field track table           the track each note is in
+---@field channel table         the channel each note is in
+---@field note table            the pitch of each note
+---@field notename table        (unimplemented) name of above
+---@field velocity table        the velocity of each note
+---@field trackEndTime table    length of each track; indices correspond to (track_number + 1) instead.
+---@field loopAt integer        the largest value in trackEndTime
+L.MidiNotes = {
+    time = {},
+    length = {},
+    track = {},
+    channel = {},
+    note = {},
+    notename = {},
+    velocity = {},
+    trackEndTime = {},
+    loopAt = 8
+}
+L.MidiNotes.__index = L.MidiNotes
+
+---Creates new MidiNotes.
+---@param instance? table       If given, turns that table into MidiNotes instead of making new one
+---@return MidiNotes instance   MidiNotes with default value
+function L.MidiNotes:new(instance)
+    instance = instance or {}
+    setmetatable(instance, self)
+    instance.time = {}
+    instance.length = {}
+    instance.track = {}
+    instance.channel = {}
+    instance.note = {}
+    instance.notename = {}
+    instance.velocity = {}
+    instance.trackEndTime = {}
+    instance.loopAt = 8
+    return instance
+end
+
+---Write the contents of table as a string
 ---@param table table           table to decipher
 ---@param isShowTypes? boolean  whether to show the type of value instead of the value itself
 ---@param strH? string          Starting statement
----@param str1? string
----@param str2? string
----@param str3? string
+---@param str1? string          before index
+---@param str2? string          between index and value
+---@param str3? string          after value
 ---@param strT? string          Final statement
----@return string str
-function L.writeTableContents(table, isShowTypes, strH, str1, str2, str3, strT)
+---@param isList? boolean       Use ipairs() instead of pairs() if true
+---@return string str           String that shows all the contents of table
+function L.writeTableContents(table, isShowTypes, strH, str1, str2, str3, strT, isList)
     strH = strH or "Contents are: "
     str1 = str1 or "\n"
     str2 = str2 or " has "
     str3 = str3 or "."
     strT = strT or "\n----"
 
+    local prs = isList and ipairs or pairs
+
     if(isShowTypes) then
-        for k,v in pairs(table) do
+        for k,v in prs(table) do
             strH = strH..str1..k..str2..type(v)..str3
         end
     else
-        for k,v in pairs(table) do
-            strH = strH..str1..k..str2..v..str3
-        end
-    end
-
-    strH = strH..strT
-    return strH
-end
-
-function L.writeListContents(table, isShowTypes, strH, str1, str2, str3, strT)
-    strH = strH or "Contents are: "
-    str1 = str1 or "\n#"
-    str2 = str2 or " has "
-    str3 = str3 or "."
-    strT = strT or "\n----"
-
-    if(isShowTypes) then
-        for k,v in ipairs(table) do
-            strH = strH..str1..k..str2..type(v)..str3
-        end
-    else
-        for k,v in ipairs(table) do
+        for k,v in prs(table) do
             strH = strH..str1..k..str2..v..str3
         end
     end
@@ -72,8 +143,6 @@ L.noteNames = {"C-1", "C#-1", "D-1", "D#-1", "E-1", "F-1", "F#-1", "G-1", "G#-1"
 function L.noteNames:getNoteName(note)
     return (self[index%128+1])
 end
-
----@alias bytesAsString string  The string read with io.open from MIDI file.
 
 ---Read the string as byte
 ---@param string bytesAsString  the string to read as if it is list of bytes
@@ -133,37 +202,14 @@ function L.midiOpenAsString(pathMidi)
     return str
 end
 
----@class MidiDecoded           NoteEventsRaw wrapped around other information of the MIDI.
----@field midiFormat integer    Format of MIDI. 0,1, or 2
----@field numTrack integer      Numbers of tracks loaded in MIDI
----@field isSMPTETime boolean   Whether the MIDI uses SMPTE time, which isn't supported by script.
----@field track table           integer, the track the event is in
----@field deltaTime table       integer, the tick the event occurs since last event started
----@field absoluteTime table    integer, the tick the event occurs since the beginning of track
----@field status table          integer, the status of event
----@field channel table         integer, the channel the event is in
----@field note table            integer, the pitch of note event
----@field velocity table        integer, the velocity of note event
----@field totalEvents integer   total of events recorded in raw.
-L.bufferMidiDecoded = {
-    midiFormat = 0,
-    numTrack = 1,
-    isSMPTETime = false,
-    track = {},
-    deltaTime = {},
-    absoluteTime = {},
-    status = {},
-    channel = {},
-    note = {},
-    velocity = {},
-    totalEvents = 16
-}
+L.bufferParsedNoteEvents = L.ParsedNoteEvents:new()
 
 ---Decode string extracted from MIDI into table of note events. 
----@param string bytesAsString  MIDI as string of binary.       迫真!バイナリのStringと化したMIDI先輩
----@return MidiDecoded tblMIDI  MIDI deconstructed into table.  テーブルとして解体したMIDI
-function L.midiDecode(string)
-    local dict = {}
+---@param string bytesAsString          MIDI as string of binary.       迫真!バイナリのStringと化したMIDI先輩
+---@param instance? ParsedNoteEvents    A cache table to update
+---@return ParsedNoteEvents tblMIDI     MIDI deconstructed into table.  テーブルとして解体したMIDI
+function L.midiDecode(string, instance)
+    local dict = L.ParsedNoteEvents:new(instance)
     local currentSize = string:byte(7)*256 + string:byte(8)
     local curIndx = 1
     local pos = currentSize + 9
@@ -253,30 +299,9 @@ function L.midiDecode(string)
     return dict
 end
 
----@class MidiNotes             lists of list of notes easily calculated by Animator    MIDIの音符の一覧。簡単に計算できる
----@field time table            start time of each note in events
----@field length table          the length of each note is in events
----@field track table           the track each note is in
----@field channel table         the channel each note is in
----@field note table            the pitch of each note
----@field notename table        (unimplemented) name of above
----@field velocity table        the velocity of each note
----@field trackEndTime table    length of each track; indices correspond to (track_number + 1) instead.
----@field loopAt integer        the largest value in trackEndTime
-L.bufferMidiNotes = {
-    time = {},
-    length = {},
-    track = {},
-    channel = {},
-    note = {},
-    notename = {},
-    velocity = {},
-    trackEndTime = {},
-    loopAt = 8
-}
+L.bufferMidiNotes = L.MidiNotes:new()
 
-
----@param dict MidiDecoded  MIDI deconstructed into table.  テーブルとして解体したMIDI
+---@param dict ParsedNoteEvents  MIDI deconstructed into table.  テーブルとして解体したMIDI
 ---@return MidiNotes noteD  lists of list of notes easily calculated by Animator    MIDIの音符の一覧。簡単に計算できる
 function L.midiNoteDecode(dict)
     local noteD= { time = {}, length = {}, track = {}, channel = {}, note = {}, notename = {}, velocity = {}, trackEndTime = {}, loopAt = 1}
