@@ -2,10 +2,10 @@ debug_print("Loading midi2Otomad.lua")
 
 local O = {}
 
-O.cacheMidi         = {}
-O.bufferNotePress   = {}
-O.bufferLayer       = {path = {}}
-O.bufferMisc        = {zoom = {}}
+O.cacheMidi         = {} --Save MidiNotes with file path as index.
+O.bufferPlayData    = {} --Saves PlayData wtih file path as index. Is updated ev ery frame as animation changes.
+O.bufferLayerPath   = {} --Saves the path of MIDI loaded by M object on layer at index
+O.bufferMisc        = {zoom = {}} --Other
 
 O.MidiToAnalyzer = require("library_M2O/midi2Analyzer")
 O.MidiToAnimator = require("library_M2O/midi2Animator")
@@ -22,39 +22,40 @@ function O.saveCacheMidi(pathMidi, resetThis)
     end
 
     if(not (O.cacheMidi[pathMidi])) then
+        O.bufferLayerPath[obj.layer] = pathMidi
         O.cacheMidi[pathMidi] = L.midiToRhythm(pathMidi)
         debug_print("Scanned MIDI at: "..pathMidi)
     end
 end 
 
----comment
+---Updates or creates PlayData at the given path. Executed every frame of M2O objects.
 ---@param currentTime timeBeat
 ---@param noteEvents MidiNotes
 ---@param path string
 function O.saveBufferLatestNote(currentTime, noteEvents, path)
 
     if((not path) or path == "") then
-        path = obj.layer
+        path = O.bufferLayerPath[obj.layer]
     else
-        O.bufferLayer.path[obj.layer] = path
+        O.bufferLayerPath[obj.layer] = path
     end
 
-    if(not (O.bufferNotePress[path])) then
-        O.bufferNotePress[path] = { index = 1, sustain = 0, sustNorm = 0, isPressed = false}
+    if(not (O.bufferPlayData[path])) then
+        O.bufferPlayData[path] = M.PlayData:new()
     end
-    local lastIndexRead = O.bufferNotePress[path].index
-    local a,b,c,d = M.playLatestNote(currentTime, noteEvents, lastIndexRead)
-    O.bufferNotePress[path].index = a
-    O.bufferNotePress[path].sustain = b
-    O.bufferNotePress[path].sustNorm = c
-    O.bufferNotePress[path].isPressed = d
+    local lastIndexRead = O.bufferPlayData[path].index
+    local a,b,c,d = M.playLatestNote(currentTime, noteEvents, lastIndexRead, O.bufferPlayData[path])
+    --O.bufferPlayData[path].index = a
+    --O.bufferPlayData[path].sustain = b
+    --O.bufferPlayData[path].sustNorm = c
+    --O.bufferPlayData[path].isPressed = d
 end
 
 function O.loadBufferLatestNote(path)
     if((not path) or path == "") then
-        path = O.bufferLayer.path[obj.layer]
+        path = O.bufferLayerPath[obj.layer]
     end
-    local N = O.bufferNotePress[path]
+    local N = O.bufferPlayData[path]
     if(not N) then
         obj.load("text", "selected MIDI is not loaded!\n選択したMIDIが読み込まれていません！")
         N = {index = 0, sustain = 0, sustNorm = 0, isPressed = false}

@@ -2,14 +2,37 @@ debug_print("Loading midi2Animator.lua")
 
 local M = {}
 
-debug_print("Initiating MIDI2Otomad...")
+---@class PlayData              table of the values of note currenlty played.
+---@field index integer         index of the note the data was taken from.
+---@field sustain timeBeat      the time since the note started was pressed. negative if it is upcoming note.
+---@field sustNorm number       the sustain, divided by the length of the note
+---@field wasPressed boolean    whether the note was ever active
+---@field wasReleased boolean   whether the note has ended being pressed
+---@field isPressed boolean     whether the note is currently active or not
+M.PlayData = {
+    index = 1,
+    sustain = 0,
+    sustNorm = 0,
+    wasPressed = false,
+    wasReleased = false,
+    isPressed = false
+}
+M.PlayData.__index = M.PlayData
 
-M.CacheMidi         = {}
-M.CacheNotePress    = {}
-M.CacheLayer        = {path = {}}
-M.CacheMisc         = {zoom = {}}
-
-M.CacheMidi.sample = {}
+---comment
+---@param instance? table       If given, turns that table into MidiNotes instead of making new object
+---@return PlayData instance    PlayData with default value
+function M.PlayData:new(instance)
+    instance = instance or {}
+    setmetatable(instance, self)
+    instance.index = 1
+    instance.sustain = 0
+    instance.sustNorm = 0
+    instance.wasPressed = false
+    instance.wasReleased = false
+    instance.isPressed = false
+    return instance
+end
 
 --Default values
 
@@ -125,59 +148,44 @@ function M.findLatestNote(currentTime, ListNotes, lastIndexRead)
     return pos
 end
 
----@class PlayData              table of the values of note currenlty played.
----@field index integer         index of the note the data was taken from.
----@field sustain timeBeat      the time since the note started was pressed. negative if it is upcoming note.
----@field sustNorm number       the sustain, divided by the length of the note
----@field wasPressed boolean    whether the note was ever active
----@field wasReleased boolean   whether the note has ended being pressed
----@field isPressed boolean     whether the note is currently active or not
-M.bufferNote = {
-    index = 1,
-    sustain = 0,
-    sustNorm = 0,
-    wasPressed = false,
-    wasReleased = false,
-    isPressed = false
-}
-local buffer = M.bufferNote
+M.bufferNote = M.PlayData:new()
 
 ---Returns the play data of the given note.
 ---@param currentTime timeBeat  time in beats
 ---@param ListNotes MidiNotes   list of notes, decoded
 ---@param index integer         index to play
----@param buffer? PlayData      the buffer table to store value; default to the class
+---@param instance? PlayData    the buffer table to store value; default to the M.bufferNote
 ---@return timeBeat sustain     the time since the note started was pressed. negative if it is upcoming note.
 ---@return number sustainNorm   the sustain, divided by the length of the note
 ---@return boolean isPressed    whether the note is currently active or not
 ---@return boolean wasPressed   whether the note was ever active
 ---@return boolean wasReleased  whether the note has ended being pressed
-function M.playNote(currentTime, ListNotes, index, buffer)
-    buffer = buffer or M.bufferNote
-    buffer.sustain = currentTime - ListNotes.time[index]
-    buffer.sustNorm = buffer.sustain/ListNotes.length[index]
-    buffer.wasPressed = (buffer.sustNorm >= 0)
-    buffer.wasReleased = (buffer.sustNorm >= 1)
-    buffer.isPressed = (not buffer.wasReleased) and buffer.wasPressed
-    return buffer.sustain, buffer.sustNorm, buffer.isPressed, buffer.wasPressed, buffer.wasReleased
+function M.playNote(currentTime, ListNotes, index, instance)
+    instance = instance or M.bufferNote
+    instance.sustain = currentTime - ListNotes.time[index]
+    instance.sustNorm = instance.sustain/ListNotes.length[index]
+    instance.wasPressed = (instance.sustNorm >= 0)
+    instance.wasReleased = (instance.sustNorm >= 1)
+    instance.isPressed = (not instance.wasReleased) and instance.wasPressed
+    return instance.sustain, instance.sustNorm, instance.isPressed, instance.wasPressed, instance.wasReleased
 end
 
 ---Returns the play data of the latest note.
 ---@param currentTime timeBeat      time in beats
 ---@param ListNotes MidiNotes       list of notes, decoded
 ---@param lastIndexRead? integer    index to start calculation from
----@param buffer? PlayData          the buffer table to store value; default to the class
+---@param instance? PlayData        the buffer table to store value; default to the class
 ---@return integer index            index to play
 ---@return number sustain           the time since the note started was pressed. negative if it is upcoming note.
 ---@return number sustNorm          the sustain, divided by the length of the note
 ---@return boolean isPressed        whether the note is currently active or not
 ---@return boolean wasPressed       whether the note was ever active
 ---@return boolean wasReleased      whether the note has ended being pressed
-function M.playLatestNote(currentTime, ListNotes, lastIndexRead, buffer)
-    buffer = buffer or M.bufferNote
-    buffer.index = M.findLatestNote(currentTime, ListNotes, lastIndexRead)
-    M.playNote(currentTime, ListNotes, buffer.index, buffer)
-    return buffer.index, buffer.sustain, buffer.sustNorm, buffer.isPressed, buffer.wasPressed, buffer.wasReleased
+function M.playLatestNote(currentTime, ListNotes, lastIndexRead, instance)
+    instance = instance or M.bufferNote
+    instance.index = M.findLatestNote(currentTime, ListNotes, lastIndexRead)
+    M.playNote(currentTime, ListNotes, instance.index, instance)
+    return instance.index, instance.sustain, instance.sustNorm, instance.isPressed, instance.wasPressed, instance.wasReleased
 end
 
 return M

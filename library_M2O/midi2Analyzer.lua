@@ -1,6 +1,8 @@
 debug_print("Loading midi2Analyzer.lua")
 
+local bit = require("bit")
 local L = {}
+
 
 ---@alias bytesAsString string  The string read with io.open from MIDI file.
 
@@ -8,6 +10,7 @@ local L = {}
 ---@field midiFormat integer    Format of MIDI. 0,1, or 2
 ---@field numTrack integer      Numbers of tracks loaded in MIDI
 ---@field isSMPTETime boolean   Whether the MIDI uses SMPTE time, which isn't supported by script.
+---@field ppq integer           number of ticks in each quarter note
 ---@field track table           integer, the track the event is in
 ---@field deltaTime table       integer, the tick the event occurs since last event started
 ---@field absoluteTime table    integer, the tick the event occurs since the beginning of track
@@ -32,7 +35,7 @@ L.ParsedNoteEvents = {
 L.ParsedNoteEvents.__index = L.ParsedNoteEvents
 
 ---Creates new ParsedNoteEvents.
----@param instance? table               If given, turns that table into ParsedNoteEvents instead of making new one
+---@param instance? table               If given, turns that table into ParsedNoteEvents instead of making new object
 ---@return ParsedNoteEvents instance    ParsedNoteEvents with default values
 function L.ParsedNoteEvents:new(instance)
     instance = instance or {}
@@ -75,7 +78,7 @@ L.MidiNotes = {
 L.MidiNotes.__index = L.MidiNotes
 
 ---Creates new MidiNotes.
----@param instance? table       If given, turns that table into MidiNotes instead of making new one
+---@param instance? table       If given, turns that table into MidiNotes instead of making new object
 ---@return MidiNotes instance   MidiNotes with default value
 function L.MidiNotes:new(instance)
     instance = instance or {}
@@ -221,16 +224,8 @@ function L.midiDecode(string, instance)
     local metaType = 0
     dict.midiFormat = string:byte(10)
     dict.numTrack = string:byte(12)
-    dict.isSMPTETime = (bit.rshift(string:byte(13), 7) == 1)
+    dict.isSMPTETime = bit.rshift(string:byte(13), 7) == 1
     dict.ppq = string:byte(13)*256 + string:byte(14)
-
-    dict.track = {}
-    dict.deltaTime = {}
-    dict.absoluteTime = {}
-    dict.status = {}
-    dict.channel = {}
-    dict.note = {}
-    dict.velocity = {}
 
     for trackIndex=0, dict.numTrack-1 do
         debug_print("Reading track # "..trackIndex)
@@ -300,65 +295,64 @@ function L.midiDecode(string, instance)
 end
 
 L.bufferMidiNotes = L.MidiNotes:new()
+L.bufferActiveNotes = {}    --temporary list used by L.midiNoteDecode for notes that are started (eventType == 9) yet not ended (eventType == 8)
 
----@param dict ParsedNoteEvents  MIDI deconstructed into table.  テーブルとして解体したMIDI
----@return MidiNotes noteD  lists of list of notes easily calculated by Animator    MIDIの音符の一覧。簡単に計算できる
-function L.midiNoteDecode(dict)
-    local noteD= { time = {}, length = {}, track = {}, channel = {}, note = {}, notename = {}, velocity = {}, trackEndTime = {}, loopAt = 1}
-    local R = dict
+---@param dict ParsedNoteEvents MIDI deconstructed into table.  テーブルとして解体したMIDI
+---@param instance? MidiNotes   A buffer table to update
+---@return MidiNotes instance  lists of list of notes easily calculated by Animator    MIDIの音符の一覧。簡単に計算できる
+function L.midiNoteDecode(dict, instance)
+    instance = instance or L.MidiNotes:new()
     local ind, finishInd = 1, 1
-    local activeNotes = {} --temporary lists for notes that are started (eventType == 9) yet not ended (eventType == 8)
     local eventType, curTk, curCh, curNt, curVl, curAT, key = 9, 0, 0, 0, 0, 0, ""
 
-    for k,v in ipairs(R.status) do
+    for k,v in ipairs(dict.status) do
         eventType = bit.rshift(v, 4)
-        curTk = R.track[k] or curTk
-        curCh = R.channel[k] or curCh
-        curNt = R.note[k] or curNt
-        curVl = R.velocity[k] or curVl
-        curAT = R.absoluteTime[k]/dict.ppq or curAT
+        curTk = dict.track[k] or curTk
+        curCh = dict.channel[k] or curCh
+        curNt = dict.note[k] or curNt
+        curVl = dict.velocity[k] or curVl
+        curAT = dict.absoluteTime[k]/dict.ppq or curAT
 
         if(eventType == 9) then
             key = string.format("%d_%d_%d", curTk, curCh, curNt)
-            noteD.time[ind] = curAT
-            noteD.track[ind] = curTk
-            noteD.channel[ind] = curCh
-            noteD.note[ind] = curNt
-            --noteD.notename[k] = L.noteNames[129](L.noteNames, noteD.note[k])
-            noteD.velocity[ind] = curVl
+            instance.time[ind] = curAT
+            instance.track[ind] = curTk
+            instance.channel[ind] = curCh
+            instance.note[ind] = curNt
+            --instance.notename[k] = L.noteNames[129](L.noteNames, instance.note[k])
+            instance.velocity[ind] = curVl
 
-            activeNotes[key] = ind
+            L.bufferActiveNotes[key] = ind
             ind = ind + 1
-        elseif(eventType == 8 or ((eventType == 9) and (R.velocity[k] == 0))) then
+        elseif(eventType == 8 or ((eventType == 9) and (dict.velocity[k] == 0))) then
             key = string.format("%d_%d_%d", curTk, curCh, curNt)
-            finishInd = activeNotes[key]
+            finishInd = L.bufferActiveNotes[key]
             if finishInd then
-                noteD.length[finishInd] = (R.absoluteTime[k]/dict.ppq) - noteD.time[finishInd]
-                activeNotes[key] = nil
+                instance.length[finishInd] = (dict.absoluteTime[k]/dict.ppq) - instance.time[finishInd]
+                L.bufferActiveNotes[key] = nil
             end
         elseif(eventType == 0xF) then
             if((v == 0xFF) and curNt == 0x2F) then
-                noteD.trackEndTime[curTk+1] = curAT
+                instance.trackEndTime[curTk+1] = curAT
             end
         end
 
     end
 
-    for k,v in ipairs(noteD.trackEndTime) do
-        noteD.loopAt = math.max(noteD.loopAt, v)
+    for k,v in ipairs(instance.trackEndTime) do
+        instance.loopAt = math.max(instance.loopAt, v)
     end
 
-    return noteD
+    return instance
 end
 
 ---@param pathMidi bytesAsString    the file path for MIDI to load 読み込むMIDIのファイルパス
+---@param instance? MidiNotes       the table to write the data in
 ---@return MidiNotes rym            data of rhythm that we could easily interpret  抽出したデータをわかりやすく作り直したもの。
-function L.midiToRhythm(pathMidi)
-    local dict = {}
-    local rym = {}
+function L.midiToRhythm(pathMidi, instance)
     local string = L.midiOpenAsString(pathMidi)
-    dict = L.midiDecode(string)
-    rym = L.midiNoteDecode(dict)
+    local dict = L.midiDecode(string)
+    local rym = L.midiNoteDecode(dict, instance)
     return rym
 end
 
