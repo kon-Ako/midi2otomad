@@ -54,7 +54,7 @@ function L.ParsedNoteEvents:new(instance)
     return instance
 end
 
----@class MidiNotes             lists of list of notes easily calculated by Animator    MIDIの音符の一覧。簡単に計算できる
+---@class MidiNotes             table of list of notes easily calculated by Animator    MIDIの音符の一覧。簡単に計算できる
 ---@field time table            start time of each note in events
 ---@field length table          the length of each note is in events
 ---@field track table           the track each note is in
@@ -96,7 +96,7 @@ function L.MidiNotes:new(instance)
 end
 
 ---Write the contents of table as a string
----@param table table           table to decipher
+---@param table table           table to read and explain as string
 ---@param isShowTypes? boolean  whether to show the type of value instead of the value itself
 ---@param strH? string          Starting statement
 ---@param str1? string          before index
@@ -144,7 +144,7 @@ L.noteNames = {"C-1", "C#-1", "D-1", "D#-1", "E-1", "F-1", "F#-1", "G-1", "G#-1"
 ---@param note integer      The pitch
 ---@return string noteName  The pitch as string
 function L.noteNames:getNoteName(note)
-    return (self[index%128+1])
+    return (self[note%128+1])
 end
 
 ---Read the string as byte
@@ -228,7 +228,6 @@ function L.midiDecode(string, instance)
     dict.ppq = string:byte(13)*256 + string:byte(14)
 
     for trackIndex=0, dict.numTrack-1 do
-        debug_print("Reading track # "..trackIndex)
         pos = string:find("MTrk", pos)
         if(not pos) then
             debug_print("No more MTrk found")
@@ -299,7 +298,7 @@ L.bufferActiveNotes = {}    --temporary list used by L.midiNoteDecode for notes 
 
 ---@param dict ParsedNoteEvents MIDI deconstructed into table.  テーブルとして解体したMIDI
 ---@param instance? MidiNotes   A buffer table to update
----@return MidiNotes instance  lists of list of notes easily calculated by Animator    MIDIの音符の一覧。簡単に計算できる
+---@return MidiNotes instance   table of lists of notes easily calculated by Animator   MIDIの音符の一覧。簡単に計算できる
 function L.midiNoteDecode(dict, instance)
     instance = instance or L.MidiNotes:new()
     local ind, finishInd = 1, 1
@@ -319,7 +318,7 @@ function L.midiNoteDecode(dict, instance)
             instance.track[ind] = curTk
             instance.channel[ind] = curCh
             instance.note[ind] = curNt
-            --instance.notename[k] = L.noteNames[129](L.noteNames, instance.note[k])
+            instance.notename[ind] = L.noteNames:getNoteName(curNt)
             instance.velocity[ind] = curVl
 
             L.bufferActiveNotes[key] = ind

@@ -29,28 +29,34 @@ function O.saveCacheMidi(pathMidi, resetThis)
 end 
 
 ---Updates or creates PlayData at the given path. Executed every frame of M2O objects.
----@param currentTime timeBeat
----@param noteEvents MidiNotes
----@param path string
-function O.saveBufferLatestNote(currentTime, noteEvents, path)
+---@param currentTime timeBeat  time in beats
+---@param listNotes MidiNotes   list of notes, decoded
+---@param pathMidi? string      The path of midis
+function O.saveBufferLatestNote(currentTime, listNotes, pathMidi)
 
-    if((not path) or path == "") then
-        path = O.bufferLayerPath[obj.layer]
+    if((not pathMidi) or pathMidi == "") then
+        pathMidi = O.bufferLayerPath[obj.layer]
     else
-        O.bufferLayerPath[obj.layer] = path
+        O.bufferLayerPath[obj.layer] = pathMidi
     end
 
-    if(not (O.bufferPlayData[path])) then
-        O.bufferPlayData[path] = M.PlayData:new()
+    if(not (O.bufferPlayData[pathMidi])) then
+        O.bufferPlayData[pathMidi] = M.PlayData:new()
     end
-    local lastIndexRead = O.bufferPlayData[path].index
-    local a,b,c,d = M.playLatestNote(currentTime, noteEvents, lastIndexRead, O.bufferPlayData[path])
+    local lastIndexRead = O.bufferPlayData[pathMidi].index
+    local a,b,c,d = M.playLatestNote(currentTime, listNotes, lastIndexRead, O.bufferPlayData[pathMidi])
     --O.bufferPlayData[path].index = a
     --O.bufferPlayData[path].sustain = b
     --O.bufferPlayData[path].sustNorm = c
     --O.bufferPlayData[path].isPressed = d
 end
 
+---Read the PlayNote at given path
+---@param path string           Path to the MIDI originally loaded and read from
+---@return integer index
+---@return integer sustain
+---@return integer sustNorm
+---@return boolean isPressed
 function O.loadBufferLatestNote(path)
     if((not path) or path == "") then
         path = O.bufferLayerPath[obj.layer]

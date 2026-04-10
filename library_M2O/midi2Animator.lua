@@ -2,6 +2,9 @@ debug_print("Loading midi2Animator.lua")
 
 local M = {}
 
+---@alias timeBeat number   time in unit of beats
+---@alias timeSecond number time in unit of seconds. For example, obj.time
+
 ---@class PlayData              table of the values of note currenlty played.
 ---@field index integer         index of the note the data was taken from.
 ---@field sustain timeBeat      the time since the note started was pressed. negative if it is upcoming note.
@@ -19,7 +22,7 @@ M.PlayData = {
 }
 M.PlayData.__index = M.PlayData
 
----comment
+---Create new PlayData
 ---@param instance? table       If given, turns that table into MidiNotes instead of making new object
 ---@return PlayData instance    PlayData with default value
 function M.PlayData:new(instance)
@@ -91,10 +94,6 @@ M.ease = {
     [17] = function(x, amp) return math.sin(x*math.pi) end
 }
 
----@alias timeBeat number   time in unit of beats
----@alias timeSecond number time in unit of seconds. For example, obj.time
-
-
 ---@param time timeSecond   time in seconds
 ---@return timeBeat time    time in beats
 function M.toBeat(time)
@@ -152,7 +151,7 @@ M.bufferNote = M.PlayData:new()
 
 ---Returns the play data of the given note.
 ---@param currentTime timeBeat  time in beats
----@param ListNotes MidiNotes   list of notes, decoded
+---@param listNotes MidiNotes   list of notes, decoded
 ---@param index integer         index to play
 ---@param instance? PlayData    the buffer table to store value; default to the M.bufferNote
 ---@return timeBeat sustain     the time since the note started was pressed. negative if it is upcoming note.
@@ -160,10 +159,10 @@ M.bufferNote = M.PlayData:new()
 ---@return boolean isPressed    whether the note is currently active or not
 ---@return boolean wasPressed   whether the note was ever active
 ---@return boolean wasReleased  whether the note has ended being pressed
-function M.playNote(currentTime, ListNotes, index, instance)
+function M.playNote(currentTime, listNotes, index, instance)
     instance = instance or M.bufferNote
-    instance.sustain = currentTime - ListNotes.time[index]
-    instance.sustNorm = instance.sustain/ListNotes.length[index]
+    instance.sustain = currentTime - listNotes.time[index]
+    instance.sustNorm = instance.sustain/listNotes.length[index]
     instance.wasPressed = (instance.sustNorm >= 0)
     instance.wasReleased = (instance.sustNorm >= 1)
     instance.isPressed = (not instance.wasReleased) and instance.wasPressed
