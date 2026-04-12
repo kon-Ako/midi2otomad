@@ -52,19 +52,19 @@ function O.saveBufferLatestNote(currentTime, listNotes, pathMidi)
 end
 
 ---Read the PlayNote at given path
----@param path string           Path to the MIDI originally loaded and read from
----@return integer index
----@return integer sustain
----@return integer sustNorm
----@return boolean isPressed
-function O.loadBufferLatestNote(path)
-    if((not path) or path == "") then
-        path = O.bufferLayerPath[obj.layer]
+---@param pathMidi string       Path to the MIDI originally loaded and read from
+---@return integer index        index of the note the data was taken from.
+---@return integer sustain      the time since the note started was pressed. negative if it is upcoming note.
+---@return integer sustNorm     the sustain, divided by the length of the note
+---@return boolean isPressed    whether the note is currently active or not
+function O.loadBufferLatestNote(pathMidi)
+    if((not pathMidi) or pathMidi == "") then
+        pathMidi = O.bufferLayerPath[obj.layer]
     end
-    local N = O.bufferPlayData[path]
+    local N = O.bufferPlayData[pathMidi]
     if(not N) then
         obj.load("text", "selected MIDI is not loaded!\n選択したMIDIが読み込まれていません！")
-        N = {index = 0, sustain = 0, sustNorm = 0, isPressed = false}
+        N = M.PlayData:new()
     end
     return N.index, N.sustain, N.sustNorm, N.isPressed
 end
