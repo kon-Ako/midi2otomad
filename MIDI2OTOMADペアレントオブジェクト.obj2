@@ -1,3 +1,5 @@
+--information: MIDI2OTOMAD ver0.0.1 by Akto_
+--label:MIDI2OTOMAD
 --track@BPM:BPM,30,240,160,1
 --track@mesPlus:開始小節,-240,240,0,1
 --track@framePlus:フレームズレ,-120,120,0,1

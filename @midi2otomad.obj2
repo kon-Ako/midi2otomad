@@ -1,4 +1,5 @@
-@情報表示
+@M2O情報表示
+--label:MIDI2OTOMAD
 --select@info:情報=1,ペアレント=1,読込済MIDI一覧=2
 --file@pathMidi:参照MIDIファイル
 --font@font:フォント名,MS UI Gothic
@@ -34,7 +35,8 @@ end
 
 obj.load("text", str)
 
-@MIDIの追加読み込み&音符表示
+@M2O_MIDIの追加読み込み&音符表示
+--label:MIDI2OTOMAD
 --font@font:フォント名,MS UI Gothic
 --track@size:サイズ,8,400,48
 --file@pathMidi:MIDIファイル
@@ -79,7 +81,8 @@ else
     end
 end
 
-@画像音MAD
+@M2O画像
+--label:MIDI2OTOMAD
 --file@pathObj:画像
 --file@pathMidi:MIDIファイル
 --check@isDebug:デバッグ,false
@@ -106,7 +109,8 @@ else
     obj.load("image",pathObj)
 end
 
-@動画音MAD
+@M2O動画
+--label:MIDI2OTOMAD
 --file@pathObj:動画
 --file@pathMidi:MIDIファイル
 --track@startTime:再生位置,0,10000,0,0.01

@@ -26,7 +26,7 @@ function O.saveCacheMidi(pathMidi, resetThis)
         O.cacheMidi[pathMidi] = L.midiToRhythm(pathMidi)
         debug_print("Scanned MIDI at: "..pathMidi)
     end
-end 
+end
 
 ---Updates or creates PlayData at the given path. Executed every frame of M2O objects.
 ---@param currentTime timeBeat  time in beats
@@ -45,10 +45,6 @@ function O.saveBufferLatestNote(currentTime, listNotes, pathMidi)
     end
     local lastIndexRead = O.bufferPlayData[pathMidi].index
     local a,b,c,d = M.playLatestNote(currentTime, listNotes, lastIndexRead, O.bufferPlayData[pathMidi])
-    --O.bufferPlayData[path].index = a
-    --O.bufferPlayData[path].sustain = b
-    --O.bufferPlayData[path].sustNorm = c
-    --O.bufferPlayData[path].isPressed = d
 end
 
 ---Read the PlayNote at given path

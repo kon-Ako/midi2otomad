@@ -13,6 +13,7 @@ local M = {}
 ---@field wasReleased boolean   whether the note has ended being pressed
 ---@field isPressed boolean     whether the note is currently active or not
 M.PlayData = {
+    currentFrame = 0,
     index = 1,
     sustain = 0,
     sustNorm = 0,
@@ -28,6 +29,7 @@ M.PlayData.__index = M.PlayData
 function M.PlayData:new(instance)
     instance = instance or {}
     setmetatable(instance, self)
+    instance.currentFrame = 0
     instance.index = 1
     instance.sustain = 0
     instance.sustNorm = 0
@@ -54,11 +56,11 @@ M.furBeat   = 0
 M.furMes    = 0
 
 --List of easing functions
----@param x number      [0,1] of animation, starting at 0 and ending at 1
----@param amp number    Amplitude used in some of easing
----@return number anim  [0,1] eased to appropraiate function. If index%3 is 2, it is a bounce: achieves 1 at middle and 0 at either end.
 M.ease = {
     --linear
+    ---@param x number      [0,1] of animation, starting at 0 and ending at 1
+    ---@param amp number    Amplitude used in some of easing
+    ---@return number anim  [0,1] eased to appropraiate function. If index%3 is 2, it is a bounce: achieves 1 at middle and 0 at either end.
     [1] = function(x, amp) return x end,
     --triangle
     [2] = function(x, amp) return 1-math.abs(2*x-1) end,
@@ -148,7 +150,7 @@ function M.findLatestNote(currentTime, ListNotes, lastIndexRead)
 end
 
 M.bufferNote = M.PlayData:new()
-
+M.bufferNote.isBuffer = true
 ---Returns the play data of the given note.
 ---@param currentTime timeBeat  time in beats
 ---@param listNotes MidiNotes   list of notes, decoded
@@ -161,11 +163,14 @@ M.bufferNote = M.PlayData:new()
 ---@return boolean wasReleased  whether the note has ended being pressed
 function M.playNote(currentTime, listNotes, index, instance)
     instance = instance or M.bufferNote
-    instance.sustain = currentTime - listNotes.time[index]
-    instance.sustNorm = instance.sustain/listNotes.length[index]
-    instance.wasPressed = (instance.sustNorm >= 0)
-    instance.wasReleased = (instance.sustNorm >= 1)
-    instance.isPressed = (not instance.wasReleased) and instance.wasPressed
+    if(instance.currentFrame ~= M.curFrame or instance.isBuffer) then
+        instance.currentFrame = M.curFrame
+        instance.sustain = currentTime - listNotes.time[index]
+        instance.sustNorm = instance.sustain/listNotes.length[index]
+        instance.wasPressed = (instance.sustNorm >= 0)
+        instance.wasReleased = (instance.sustNorm >= 1)
+        instance.isPressed = (not instance.wasReleased) and instance.wasPressed
+    end
     return instance.sustain, instance.sustNorm, instance.isPressed, instance.wasPressed, instance.wasReleased
 end
 
