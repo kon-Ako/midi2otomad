@@ -78,7 +78,8 @@ width = ((width == 0) and obj.w) or width
 height = ((height == 0) and obj.h) or height
 
 obj.setoption("drawtarget", "tempbuffer", width, height)
-obj.draw(obj.ox, obj.oy, obj.oz, O.bufferMisc.zoom[obj.layer] or 1, obj.alpha, obj.rx, obj.ry, obj.rz)
+obj.effect("拡大率","X",obj.sx*100,"Y",obj.sy*100,"Z",obj.sz*100)
+obj.draw(obj.ox, obj.oy, obj.oz, 1, obj.alpha, obj.rx, obj.ry, obj.rz)
 obj.load("tempbuffer")
 obj.setoption("drawtarget", "framebuffer")
 
@@ -124,22 +125,18 @@ end
 --select@easing:イージング=1,直線=1,∧三角波=2,」二次関数イン=3,「二次関数アウト=4,∧二次関数往復=5,」三次関数イン=6,「三次関数アウト=7,∧三次関数往復=8,」多項式イン=9,「多項式アウト=10,∧多項式往復=11,」指数関数イン=12,「指数関数アウト=13,∧指数関数往復=14,」サインイン=15,「コサインアウト=16,∧サイン往復=17
 --track@amplitude:勢い,0,40,4,0.01
 --check@isDecaying:減衰,1
---check@isAlternating:交互反転,0
+--check@isSwitching:交互に減衰と増幅,0
+--check@isAlternating:交互にΔ反転,0
 --file@pathMidi:参照MIDI上書
 
 local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local a,b,c,d = O.loadBufferLatestNote(pathMidi)
-a = a + delayIndex
-local sign = 1-2*(isAlternating*a%2)
-local anim = isNorm and c or b
-anim = (length == 0) and 1 or anim/length --if length is 0, finish immediately; else, anim is squished by length
-local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim), amplitude))
+local progress, anim, ind, sus, susN, isP = O.calculateProgress(length, isNorm, delayIndex, easing, amplitude, isDecaying, isSwitching, isAlternating, pathMidi)
 
-obj.ox = obj.ox + x*progress*sign
-obj.oy = obj.oy + y*progress*sign
+obj.ox = obj.ox + x*progress
+obj.oy = obj.oy + y*progress
 
 @M2O標準描画
 --label:MIDI2OTOMAD
@@ -162,47 +159,44 @@ obj.oy = obj.oy + y*progress*sign
 --select@easing:イージング=1,直線=1,∧三角波=2,」二次関数イン=3,「二次関数アウト=4,∧二次関数往復=5,」三次関数イン=6,「三次関数アウト=7,∧三次関数往復=8,」多項式イン=9,「多項式アウト=10,∧多項式往復=11,」指数関数イン=12,「指数関数アウト=13,∧指数関数往復=14,」サインイン=15,「コサインアウト=16,∧サイン往復=17
 --track@amplitude:勢い,0,40,4,0.01
 --check@isDecaying:減衰,1
---check@isAlternating:交互反転,0
+--check@isSwitching:交互に減衰と増幅,0
+--check@isAlternating:交互にΔ反転,0
 --file@pathMidi:参照MIDI上書
 
 local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local a,b,c,d = O.loadBufferLatestNote(pathMidi)
-a = a + delayIndex
-local sign = 1-2*(isAlternating*a%2)
-local anim = isNorm and c or b
-anim = (length==0) and 1 or anim/length
-local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1,anim), amplitude))
+local progress, anim, ind, sus, susN, isP = O.calculateProgress(length, isNorm, delayIndex, easing, amplitude, isDecaying, isSwitching, isAlternating, pathMidi)
 --[[
 obj.cx = cx
 obj.cy = cy
 obj.cz = cz
 ]]
-obj.ox = obj.ox + x*progress*sign
-obj.oy = obj.oy + y*progress*sign
-obj.oz = obj.oz + z*progress*sign
+obj.ox = obj.ox + x*progress
+obj.oy = obj.oy + y*progress
+obj.oz = obj.oz + z*progress
 
-obj.rx = obj.rx + rx*progress*sign
-obj.ry = obj.ry + ry*progress*sign
-obj.rz = obj.rz + rz*progress*sign
+obj.rx = obj.rx + rx*progress
+obj.ry = obj.ry + ry*progress
+obj.rz = obj.rz + rz*progress
 
-obj.sx = obj.sx * (zoom/100) * (1 - math.max(0, aspect/100*progress*sign))
-obj.sy = obj.sy * (zoom/100) * (1 - math.max(0, aspect/-100*progress*sign))
+obj.sx = obj.sx * (zoom/100) * (1 - math.max(0, aspect/100*progress))
+obj.sy = obj.sy * (zoom/100) * (1 - math.max(0, aspect/-100*progress))
 obj.sz = obj.sz * (zoom/100)
 
-obj.alpha = obj.alpha * (1-transparency/100*progress)
+obj.alpha = obj.alpha * (1-transparency/100*math.abs(progress))
 
 @M2O基本拡大
 --label:MIDI2OTOMAD
---track@zoom:Δ拡大率,0,800,100,0.01
+--track@zoom:拡大率,0,800,100,0.01
+--track@dzoom:Δ拡大率,-800,800,0,0.01
 --track@sx:X拡大,0,800,100,0.01
---track@dsx:ΔX拡大,-400,800,0,0.01
+--track@dsx:ΔX拡大,-800,800,0,0.01
 --track@sy:Y拡大,0,800,100,0.01
---track@dsy:ΔY拡大,-400,800,0,0.01
+--track@dsy:ΔY拡大,-800,800,0,0.01
 --track@sz:Z拡大,0,800,100,0.01
---track@dsz:ΔZ拡大,-400,800,0,0.01
+--track@dsz:ΔZ拡大,-800,800,0,0.01
 --group:M2O共通項目,true
 --track@length:時間(拍),0,10,1,0.01
 --check@isNorm:正規化,false
@@ -210,21 +204,19 @@ obj.alpha = obj.alpha * (1-transparency/100*progress)
 --select@easing:イージング=1,直線=1,∧三角波=2,」二次関数イン=3,「二次関数アウト=4,∧二次関数往復=5,」三次関数イン=6,「三次関数アウト=7,∧三次関数往復=8,」多項式イン=9,「多項式アウト=10,∧多項式往復=11,」指数関数イン=12,「指数関数アウト=13,∧指数関数往復=14,」サインイン=15,「コサインアウト=16,∧サイン往復=17
 --track@amplitude:勢い,0,40,4,0.01
 --check@isDecaying:減衰,1
---check@isAlternating:交互反転,0
+--check@isSwitching:交互に減衰と増幅,0
+--check@isAlternating:交互にΔ反転,0
 --file@pathMidi:参照MIDI上書
 
 local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local a,b,c,d = O.loadBufferLatestNote(pathMidi)
-a = a + delayIndex
-local sign = 1-2*(isAlternating*a%2)
-local anim = isNorm and c or b
-anim = (length == 0) and 1 or anim/length --if length is 0, finish immediately; else, anim is squished by length
-local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim), amplitude))
+local progress, anim, ind, sus, susN, isP = O.calculateProgress(length, isNorm, delayIndex, easing, amplitude, isDecaying, isSwitching, isAlternating, pathMidi)
 
-obj.zoom = obj.zoom*(1+progress*sign*(zoom-100)/100)
+obj.sx = obj.sx*zoom*(sx + (dzoom + dsx)*progress)/10000
+obj.sy = obj.sy*zoom*(sy + (dzoom + dsy)*progress)/10000
+obj.sz = obj.sz*zoom*(sz + (dzoom + dsz)*progress)/10000
 -- idk why but obj.zoom resets with every filter, but is displayed if not obj.draw()ed
 O.bufferMisc.zoom[obj.layer] = obj.zoom
 
@@ -238,30 +230,26 @@ O.bufferMisc.zoom[obj.layer] = obj.zoom
 --select@easing:イージング=1,直線=1,∧三角波=2,」二次関数イン=3,「二次関数アウト=4,∧二次関数往復=5,」三次関数イン=6,「三次関数アウト=7,∧三次関数往復=8,」多項式イン=9,「多項式アウト=10,∧多項式往復=11,」指数関数イン=12,「指数関数アウト=13,∧指数関数往復=14,」サインイン=15,「コサインアウト=16,∧サイン往復=17
 --track@amplitude:勢い,0,40,4,0.01
 --check@isDecaying:減衰,1
---check@isAlternating:交互反転,0
+--check@isSwitching:交互に減衰と増幅,0
+--check@isAlternating:交互にΔ反転,0
 --file@pathMidi:参照MIDI上書
 
 local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-divisions = (divisions == 0) and 1 or divisions
+divisions = (divisions == 0) and 99999 or divisions
 
-local a,b,c,d = O.loadBufferLatestNote(pathMidi)
-a = a + delayIndex
-local sign = 1-2*(isCounterClockwise)
-local anim = isNorm and c or b
-anim = (length == 0) and 1 or anim/length --if length is 0, finish immediately; else, anim is squished by length
-local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim), amplitude))
+local progress, anim, ind, sus, susN, isP = O.calculateProgress(length, isNorm, delayIndex, easing, amplitude, isDecaying, isSwitching, isAlternating, pathMidi)
 
-obj.rz = obj.rz + sign*((360/divisions*(a-1))%360 - 360/divisions*progress)
+obj.rz = obj.rz + (360/divisions*(ind))%360 - 360/divisions*progress
 
 @M2Oラスター
 --label:MIDI2OTOMAD
---track@width:横幅,0,2000,100,1
+--track@width:横幅,0,2000,0,1
 --track@dwidth:Δ横幅,-2000,2000,100,1
 --track@height:高さ,0,2000,100,1
---track@dheight:Δ高さ,-2000,2000,100,1
+--track@dheight:Δ高さ,-2000,2000,0,1
 --track@interval:周期,-40,40,1,0.01
 --check@randomW:ランダム振幅,0
 --check@vertical:縦ラスター,0
@@ -279,16 +267,13 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local a,b,c,d = O.loadBufferLatestNote(pathMidi)
-local anim = isNorm and c or b
-anim = (length == 0) and 1 or anim/length --if length is 0, finish immediately; else, anim is squished by length
-local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim), amplitude))
+local progress, anim, ind, sus, susN, isP = O.calculateProgress(length, isNorm, delayIndex, easing, amplitude, isDecaying, 0, 0, pathMidi)
 
 obj.effect("ラスター",
 "横幅",width + dwidth*progress,
 "高さ",height + dheight*progress,
 "周期",interval,
-"縦ラスター",(vertical+isAlternating*a)%2,
+"縦ラスター",(vertical+isAlternating*ind)%2,
 "ランダム振幅",randomW)
 
 @M2O色調補正
@@ -311,19 +296,15 @@ obj.effect("ラスター",
 --select@easing:イージング=1,直線=1,∧三角波=2,」二次関数イン=3,「二次関数アウト=4,∧二次関数往復=5,」三次関数イン=6,「三次関数アウト=7,∧三次関数往復=8,」多項式イン=9,「多項式アウト=10,∧多項式往復=11,」指数関数イン=12,「指数関数アウト=13,∧指数関数往復=14,」サインイン=15,「コサインアウト=16,∧サイン往復=17
 --track@amplitude:勢い,0,40,4,0.01
 --check@isDecaying:減衰,1
---check@isAlternating:交互反転,0
+--check@isSwitching:交互に減衰と増幅,0
+--check@isAlternating:交互にΔ反転,0
 --file@pathMidi:参照MIDI上書
 
 local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local a,b,c,d = O.loadBufferLatestNote(pathMidi)
-a = a + delayIndex
-local sign = 1-2*(isAlternating*a%2)
-local anim = isNorm and c or b
-anim = (length == 0) and 1 or anim/length --if length is 0, finish immediately; else, anim is squished by length
-local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim), amplitude))
+local progress, anim, ind, sus, susN, isP = O.calculateProgress(length, isNorm, delayIndex, easing, amplitude, isDecaying, isSwitching, isAlternating, pathMidi)
 
 obj.effect("色調補正",
 "明るさ", bright + dbright*progress,
@@ -352,23 +333,19 @@ obj.effect("色調補正",
 --select@easing:イージング=1,直線=1,∧三角波=2,」二次関数イン=3,「二次関数アウト=4,∧二次関数往復=5,」三次関数イン=6,「三次関数アウト=7,∧三次関数往復=8,」多項式イン=9,「多項式アウト=10,∧多項式往復=11,」指数関数イン=12,「指数関数アウト=13,∧指数関数往復=14,」サインイン=15,「コサインアウト=16,∧サイン往復=17
 --track@amplitude:勢い,0,40,4,0.01
 --check@isDecaying:減衰,1
---check@isAlternating:交互反転,0
+--check@isSwitching:交互に減衰と増幅,0
+--check@isAlternating:交互にΔ反転,0
 --file@pathMidi:参照MIDI上書
 
 local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local a,b,c,d = O.loadBufferLatestNote(pathMidi)
-a = a + delayIndex
-local sign = 1-2*(isAlternating*a%2)
-local anim = isNorm and c or b
-anim = (length == 0) and 1 or anim/length --if length is 0, finish immediately; else, anim is squished by length
-local progress = isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim), amplitude))
+local progress, anim, ind, sus, susN, isP = O.calculateProgress(length, isNorm, delayIndex, easing, amplitude, isDecaying, isSwitching, isAlternating, pathMidi)
 
 obj.effect("斜めクリッピング",
-"中心X", cx + dcx*progress*sign,
-"中心Y", cy + dcy*progress*sign,
-"角度", angle + dangle*progress*sign,
-"ぼかし", blur + dblur*progress*sign,
+"中心X", cx + dcx*progress,
+"中心Y", cy + dcy*progress,
+"角度", angle + dangle*progress,
+"ぼかし", blur + dblur*progress,
 "幅", width + dwidth*progress)
