@@ -1,9 +1,9 @@
-@下のフィルタを事前実行
+@M2O下のフィルタを事前実行
 --label:MIDI2OTOMAD
 
 obj.effect()
 
-@事前実行環境でペアレントオブジェクト化
+@M2O事前実行環境でペアレントオブジェクト化
 --label:MIDI2OTOMAD
 --track@BPM:BPM,30,240,160,1
 --track@mesPlus:開始小節,-240,240,0,1
@@ -40,7 +40,7 @@ M.curMes    = M.curBeat/M.metre
 M.furBeat   = math.floor(M.curBeat)
 M.furMes    = math.floor(M.curMes)
 
-@MIDI2OTOMAD化
+@M2O対応化
 --label:MIDI2OTOMAD
 --file@pathMidi:MIDIファイル
 --check@isDebug:デバッグ,false
@@ -65,7 +65,7 @@ if(isDebug) then
     obj.load("text", aa.." has "..arr.time[aa].."\nPlaying now: "..ab.."\nCompleted: "..ac.."\nand is "..ae)
 end
 
-@仮想バッファに描画して読み込み
+@M2O仮想バッファに描画して読み込み
 --label:MIDI2OTOMAD
 --track@width:サイズW,0,8000,100,1
 --track@height:サイズH,0,8000,100,1
@@ -194,7 +194,13 @@ obj.alpha = obj.alpha * (1-transparency/100*progress)
 
 @M2O基本拡大
 --label:MIDI2OTOMAD
---track@zoom:Δ拡大率,0,800,200,0.01
+--track@zoom:Δ拡大率,0,800,100,0.01
+--track@sx:X拡大,0,800,100,0.01
+--track@dsx:ΔX拡大,-400,800,0,0.01
+--track@sy:Y拡大,0,800,100,0.01
+--track@dsy:ΔY拡大,-400,800,0,0.01
+--track@sz:Z拡大,0,800,100,0.01
+--track@dsz:ΔZ拡大,-400,800,0,0.01
 --track@delayIndex:カウントずらし,-100,100,0,1
 --select@easing:イージング=1,直線=1,∧三角波=2,」二次関数イン=3,「二次関数アウト=4,∧二次関数往復=5,」三次関数イン=6,「三次関数アウト=7,∧三次関数往復=8,」多項式イン=9,「多項式アウト=10,∧多項式往復=11,」指数関数イン=12,「指数関数アウト=13,∧指数関数往復=14,」サインイン=15,「コサインアウト=16,∧サイン往復=17
 --track@length:時間(拍),0,10,1,0.01

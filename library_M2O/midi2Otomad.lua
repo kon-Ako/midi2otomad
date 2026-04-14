@@ -48,7 +48,7 @@ function O.saveBufferLatestNote(currentTime, listNotes, pathMidi)
 end
 
 ---Read the PlayNote at given path
----@param pathMidi string       Path to the MIDI originally loaded and read from
+---@param pathMidi? string      Path to the MIDI originally loaded and read from
 ---@return integer index        index of the note the data was taken from.
 ---@return integer sustain      the time since the note started was pressed. negative if it is upcoming note.
 ---@return integer sustNorm     the sustain, divided by the length of the note
@@ -63,6 +63,31 @@ function O.loadBufferLatestNote(pathMidi)
         N = M.PlayData:new()
     end
     return N.index, N.sustain, N.sustNorm, N.isPressed
+end
+
+---Reprocess the sustain of note based on information of track.
+---@param delayIndex integer        index is calculated with this number added instead of actual number.
+---@param easing integer            specifies which easing function is used
+---@param length number             length of animation, in beats
+---@param amplitude number          amplitude of easing function
+---@param isNorm boolean            if true, anim uses sustNorm instead of sustain
+---@param isDecaying integer        0 or 1. If 1, progress transition from 1→0 instead of 0→1
+---@param isAlternating integer     0 or 1. If 1, index is multiplied by -1 every other index.
+---@param pathMidi? string          Path to the MIDI originally loaded and read from
+---@return number progress          the final animation progression value
+---@return number anim              the progress of animation with note length in mind. Starts at 0 and isn't bounded.
+---@return integer index            index of the note the data was taken from.
+---@return number sustain           the time since the note started was pressed. negative if it is upcoming note.
+---@return number sustNorm          the sustain, divided by the length of the note
+---@return boolean isPressed        whether the note is currently active or not
+function O.calculateProgress(delayIndex, easing, length, amplitude, isNorm, isDecaying, isAlternating, pathMidi)
+    local index, sustain, sustNorm, isPressed = O.loadBufferLatestNote(pathMidi)
+    index = index + delayIndex
+    local sign = 1-2*(isAlternating*index%2)
+    local anim = isNorm and sustNorm or sustain
+    anim = (length == 0) and 1 or anim/length --if length is 0, finish immediately; else, anim is squished by length
+    local progress = (isDecaying+(1-2*isDecaying)*(M.ease[easing](math.min(1, anim), amplitude)))*sign
+    return progress, anim, index, sustain, sustNorm, isPressed
 end
 
 return O

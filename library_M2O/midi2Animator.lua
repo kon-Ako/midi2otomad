@@ -150,7 +150,6 @@ function M.findLatestNote(currentTime, ListNotes, lastIndexRead)
 end
 
 M.bufferNote = M.PlayData:new()
-M.bufferNote.isBuffer = true
 ---Returns the play data of the given note.
 ---@param currentTime timeBeat  time in beats
 ---@param listNotes MidiNotes   list of notes, decoded
@@ -163,14 +162,12 @@ M.bufferNote.isBuffer = true
 ---@return boolean wasReleased  whether the note has ended being pressed
 function M.playNote(currentTime, listNotes, index, instance)
     instance = instance or M.bufferNote
-    if(instance.currentFrame ~= M.curFrame or instance.isBuffer) then
-        instance.currentFrame = M.curFrame
-        instance.sustain = currentTime - listNotes.time[index]
-        instance.sustNorm = instance.sustain/listNotes.length[index]
-        instance.wasPressed = (instance.sustNorm >= 0)
-        instance.wasReleased = (instance.sustNorm >= 1)
-        instance.isPressed = (not instance.wasReleased) and instance.wasPressed
-    end
+    instance.currentFrame = M.curFrame
+    instance.sustain = currentTime - listNotes.time[index]
+    instance.sustNorm = instance.sustain/listNotes.length[index]
+    instance.wasPressed = (instance.sustNorm >= 0)
+    instance.wasReleased = (instance.sustNorm >= 1)
+    instance.isPressed = (not instance.wasReleased) and instance.wasPressed
     return instance.sustain, instance.sustNorm, instance.isPressed, instance.wasPressed, instance.wasReleased
 end
 
@@ -187,8 +184,10 @@ end
 ---@return boolean wasReleased      whether the note has ended being pressed
 function M.playLatestNote(currentTime, ListNotes, lastIndexRead, instance)
     instance = instance or M.bufferNote
-    instance.index = M.findLatestNote(currentTime, ListNotes, lastIndexRead)
-    M.playNote(currentTime, ListNotes, instance.index, instance)
+    if(instance.currentFrame ~= M.curFrame or instance == M.bufferNote) then
+        instance.index = M.findLatestNote(currentTime, ListNotes, lastIndexRead)
+        M.playNote(currentTime, ListNotes, instance.index, instance)
+    end
     return instance.index, instance.sustain, instance.sustNorm, instance.isPressed, instance.wasPressed, instance.wasReleased
 end
 
