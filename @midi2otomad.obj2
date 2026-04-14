@@ -54,7 +54,7 @@ if(not O) then
     obj.load("text","ERROR\n起動オブジェクトが存在しません！\nBoot Object doesn't exist!")
 else
     if(pathMidi == "") then
-        pathMidi = M.scriptPath.."test.MID"
+        pathMidi = M.scriptPath.."library_M2O\\test.MID"
     end
 
     O.saveCacheMidi(pathMidi, resetThis)
