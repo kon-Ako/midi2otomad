@@ -39,6 +39,82 @@ function M.PlayData:new(instance)
     return instance
 end
 
+---@class SequencedImage        Used to store some properties of filepath
+---@field pathGeneral string    File path without the numbers and type
+---@field extensionIndx integer The index where fiele extension begins
+---@field fileExtension string  File extension including period
+---@field is0Filled boolean     Whether the sequenced image index fill higher unused digit with 0 or not
+---@field totalDigits integer   Used when is0Filled is true. Total digits used to fill.
+---@field startFrame integer    The first frame of the sequence found
+---@field finalFrame integer    Final frame of the sequence found
+M.SequencedImage = {
+    pathGeneral = "",
+    extensionIndx = 1,
+    fileExtension = ".png",
+    is0Filled = false,
+    totalDigits = 0,
+    startFrame = 1,
+    finalFrame = 2
+}
+M.SequencedImage.__index = M.SequencedImage
+
+---Create new SequencedImage
+---@param pathObj string            Path of the Sequenced Image
+---@param instance? table           If given, turns that table into ParsedNoteEvents instead of making new object
+---@return SequencedImage instance  Used to store some properties of filepath
+function M.SequencedImage:new(pathObj, instance)
+    instance = instance or {}
+    setmetatable(instance, self)
+    local extensionIndx, strStartFrame = nil, ""
+    extensionIndx, _, strStartFrame, instance.fileExtension = pathObj:find("(%d+)(%.[^%.]+)$")
+    if(not extensionIndx) then
+        obj.load("text", "Invalid Sequenced Image!\n読み込んだファイルは連番画像ではありません！")
+        obj.draw()
+        return instance
+    end
+    instance.extensionIndx = extensionIndx
+    instance.pathGeneral = pathObj:sub(1,extensionIndx-1)
+    instance.startFrame = tonumber(strStartFrame)
+
+    instance.is0Filled = (strStartFrame == tostring(instance.startFrame))
+
+    if(instance.is0Filled) then
+        instance.totalDigits = strStartFrame:len()
+    end
+
+    instance.finalFrame = instance:findFinalFrame()
+
+    debug_print(instance.pathGeneral)
+    debug_print(instance.finalFrame)
+
+    return instance
+end
+
+---Starting with start frame, opens image one by one. Records the final frame where load wasa successful.
+---@return integer totalDigits
+function M.SequencedImage:findFinalFrame()
+    local flag = true
+    local frame= self.startFrame
+    while(flag) do
+        flag = obj.load("image", self:getCompletePath(frame))
+        frame = frame + 1
+    end
+    self.finalFrame = frame - 2
+    debug_print("final frame found was "..tostring(self.finalFrame))
+    return self.finalFrame
+end
+
+---Depending on how the Sequenced Image is numbered, returns appropriate file path to load the given frame.
+---@param frame integer         The number of the frame to load.
+---@return string completePath  The complete filepath to load.
+function M.SequencedImage:getCompletePath(frame)
+    local string = self.pathGeneral
+    if(self.is0Filled) then
+        string = string..string.rep("0", self.totalDigits - 1 - math.floor(math.log(frame, 10) or 0))
+    end
+    return string..frame..self.fileExtension
+end
+
 --Default values
 
 M.scriptPath = "C:\\ProgramData\\aviutl2\\Script\\midi2otomad"

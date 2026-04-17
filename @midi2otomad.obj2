@@ -138,11 +138,10 @@ local arr = O.cacheMidi[pathMidi]
 O.saveBufferLatestNote(M.curBeat, arr, pathMidi)
 
 if(isDebug) then
-    local aa, ab, ac, ad = O.bufferPlayData[pathMidi].index, O.bufferPlayData[pathMidi].sustain, O.bufferPlayData[pathMidi].sustNorm, O.bufferPlayData[pathMidi].isPressed
-    ab = math.floor(ab*100)/100
-    ac = math.floor(ac*100)/100
-    local ae = ad and "T" or "F"
-    obj.load("text", aa.." has "..arr.time[aa].."\nPlaying now: "..ab.."\nCompleted: "..ac.."\nand is "..ae)
+    local index, sustain, sustNorm, isPressed = O.loadBufferLatestNote()
+    sustain = math.floor(sustain*100)/100
+    sustNorm = math.floor(sustNorm*100)/100
+    obj.load("text", index.." has "..arr.time[index].."\nPlaying now: "..sustain.."\nCompleted: "..sustNorm.."\nand is "..tostring(isPressed))
 else
     obj.load("image",pathObj)
 end
@@ -170,6 +169,8 @@ O.saveBufferLatestNote(M.curBeat, arr, pathMidi)
 local index, sustain, sustNorm, isPressed = O.loadBufferLatestNote()
 local vidLength = 0
 if(isDebug) then
+    sustain = math.floor(sustain*100)/100
+    sustNorm = math.floor(sustNorm*100)/100
     obj.load("text", index.." has "..arr.time[index].."\nPlaying now: "..sustain.."\nCompleted: "..sustNorm.."\nand is "..tostring(isPressed))
 else
     vidLength = obj.load("movie",pathObj,math.max(startTime+playSpeed/100*M.unBeat(sustain), 0))
@@ -197,19 +198,30 @@ local arr = O.cacheMidi[pathMidi]
 O.saveBufferLatestNote(M.curBeat, arr, pathMidi)
 local index, sustain, sustNorm, isPressed = O.loadBufferLatestNote()
 
+if ( not O.bufferSeqImage[pathObj]) then
+    O.bufferSeqImage[pathObj] = M.SequencedImage:new(pathObj)
+end
+local S = O.bufferSeqImage[pathObj]
 -- Separate path into path, number, and format
-local extensionIndx, _, strStartFrame, format= pathObj:find("(%d+)(%.[^%.]+)$")
-local pathGeneral = pathObj:sub(1,extensionIndx-1)
-local startFrame = tonumber(strStartFrame)
-local frame = startFrame + math.max(0, math.floor(M.unBeat(sustain)*playSpeed/100*obj.framerate))
+local frame = S.startFrame + math.max(0, math.floor(M.unBeat(sustain)*playSpeed/100*obj.framerate))
 
-loopStart = math.max(loopStart, startFrame)
-loopEnd = math.max(loopStart, loopEnd) + 1
+loopStart = math.max(loopStart, S.startFrame)
+loopEnd = math.min(S.finalFrame, math.max(loopStart, loopEnd)) + 1
 local loadFrame = math.min(frame, (frame-loopStart)%(loopEnd-loopStart)+loopStart)
 
---If file contains sequence of 0, concatenate appropriate sequence
-if (strStartFrame == tostring(startFrame)) then
-    pathGeneral = pathGeneral..string.rep("0",(strStartFrame:len() - 1 - math.floor(math.log(loadFrame,10) or 0)))
-end
+local pathComplete = S:getCompletePath(loadFrame)
 
-obj.load("image", pathGeneral..loadFrame..format)
+obj.load("image", pathComplete)
+
+if(isDebug) then
+    local w,h = obj.w, obj.h
+    local totFrameSqrt = math.floor(math.sqrt(S.finalFrame - S.startFrame))
+
+    for i = 0, S.finalFrame-S.startFrame do
+        obj.load("image", S:getCompletePath(i+S.startFrame))
+        if( i+S.startFrame == loadFrame) then
+            obj.effect("枠線", "サイズ", 10*totFrameSqrt, "枠色", 0xff0000)
+        end
+        obj.draw(w/totFrameSqrt*(i%totFrameSqrt - (totFrameSqrt-1)/2),h/totFrameSqrt*(math.floor(i/totFrameSqrt) - (totFrameSqrt-1)/2), 0, 1/totFrameSqrt)
+    end
+end
