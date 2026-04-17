@@ -113,6 +113,21 @@ else
     )
 end
 
+@M2O音符再生中にのみ表示
+--label:MIDI2OTOMAD
+--check@reverse:逆に無音時のみ表示,false
+--group:M2O共通項目,true
+--file@pathMidi:参照MIDI上書
+
+local O = Akto.MidiToOtomad
+local M = O.MidiToAnimator
+local L = O.MidiToAnalyzer
+
+local a,b,c,isPressed = O.loadBufferLatestNote(pathMidi)
+
+if( isPressed == reverse ) then
+    obj.alpha = 0
+end
 
 @M2O基本移動
 --label:MIDI2OTOMAD

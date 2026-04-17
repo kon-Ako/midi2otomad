@@ -73,6 +73,7 @@ L.MidiNotes = {
     notename = {},
     velocity = {},
     trackEndTime = {},
+    totalActive = {},
     loopAt = 8
 }
 L.MidiNotes.__index = L.MidiNotes
@@ -91,6 +92,7 @@ function L.MidiNotes:new(instance)
     instance.notename = {}
     instance.velocity = {}
     instance.trackEndTime = {}
+    instance.totalActive = {}
     instance.loopAt = 8
     return instance
 end
@@ -302,7 +304,7 @@ L.bufferActiveNotes = {}    --temporary list used by L.midiNoteDecode for notes 
 function L.midiNoteDecode(dict, instance)
     instance = instance or L.MidiNotes:new()
     local ind, finishInd = 1, 1
-    local eventType, curTk, curCh, curNt, curVl, curAT, key = 9, 0, 0, 0, 0, 0, ""
+    local eventType, curTk, curCh, curNt, curVl, curAT, key, count = 9, 0, 0, 0, 0, 0, "", 0
 
     for k,v in ipairs(dict.status) do
         eventType = bit.rshift(v, 4)
@@ -322,6 +324,8 @@ function L.midiNoteDecode(dict, instance)
             instance.velocity[ind] = curVl
 
             L.bufferActiveNotes[key] = ind
+            count = count + 1
+            instance.totalActive[ind] = count
             ind = ind + 1
         elseif(eventType == 8 or ((eventType == 9) and (dict.velocity[k] == 0))) then
             key = string.format("%d_%d_%d", curTk, curCh, curNt)
@@ -329,6 +333,7 @@ function L.midiNoteDecode(dict, instance)
             if finishInd then
                 instance.length[finishInd] = (dict.absoluteTime[k]/dict.ppq) - instance.time[finishInd]
                 L.bufferActiveNotes[key] = nil
+                count = count - 1
             end
         elseif(eventType == 0xF) then
             if((v == 0xFF) and curNt == 0x2F) then

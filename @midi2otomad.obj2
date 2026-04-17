@@ -1,5 +1,5 @@
 @MIDI2OTOMADペアレントオブジェクト
---information: MIDI2OTOMAD ver0.0.1 by Akto_
+--information: MIDI2OTOMAD ver0.0.1 by Akto
 --label:MIDI2OTOMAD
 --track@BPM:BPM,30,240,160,1
 --track@mesPlus:開始小節,-240,240,0,1
@@ -151,9 +151,9 @@ end
 --label:MIDI2OTOMAD
 --file@pathObj:動画
 --file@pathMidi:MIDIファイル
+--check@isDebug:デバッグ,false
 --track@startTime:再生位置,0,10000,0,0.01
 --track@playSpeed:再生速度,-2000,2000,100,0.01
---check@isDebug:デバッグ,false
 
 local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
@@ -174,3 +174,42 @@ if(isDebug) then
 else
     vidLength = obj.load("movie",pathObj,math.max(startTime+playSpeed/100*M.unBeat(sustain), 0))
 end
+
+@M2O連番画像
+--label:MIDI2OTOMAD
+--file@pathObj:開始連番画像
+--file@pathMidi:MIDIファイル
+--check@isDebug:デバッグ,false
+--track@loopStart:ループ開始,0,10000,0,1
+--track@loopEnd:ループ終了,0,10000,0,1
+--track@playSpeed:再生速度,-2000,2000,100,0.01
+
+local O = Akto.MidiToOtomad
+local M = O.MidiToAnimator
+local L = O.MidiToAnalyzer
+
+if(pathMidi == "") then
+    pathMidi = M.scriptPath.."library_M2O\\test.MID"
+end
+
+O.saveCacheMidi(pathMidi)
+local arr = O.cacheMidi[pathMidi]
+O.saveBufferLatestNote(M.curBeat, arr, pathMidi)
+local index, sustain, sustNorm, isPressed = O.loadBufferLatestNote()
+
+-- Separate path into path, number, and format
+local extensionIndx, _, strStartFrame, format= pathObj:find("(%d+)(%.[^%.]+)$")
+local pathGeneral = pathObj:sub(1,extensionIndx-1)
+local startFrame = tonumber(strStartFrame)
+local frame = startFrame + math.max(0, math.floor(M.unBeat(sustain)*playSpeed/100*obj.framerate))
+
+loopStart = math.max(loopStart, startFrame)
+loopEnd = math.max(loopStart, loopEnd) + 1
+local loadFrame = math.min(frame, (frame-loopStart)%(loopEnd-loopStart)+loopStart)
+
+--If file contains sequence of 0, concatenate appropriate sequence
+if (strStartFrame == tostring(startFrame)) then
+    pathGeneral = pathGeneral..string.rep("0",(strStartFrame:len() - 1 - math.floor(math.log(loadFrame,10) or 0)))
+end
+
+obj.load("image", pathGeneral..loadFrame..format)
