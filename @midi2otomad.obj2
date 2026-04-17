@@ -71,7 +71,9 @@ elseif(info == 3) then
     end
 end
 
-obj.load("text", str)
+if(not obj.getinfo("saving")) then
+    obj.load("text", str)
+end
 
 @M2O_MIDIの追加読み込み&音符表示
 --label:MIDI2OTOMAD
