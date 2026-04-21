@@ -50,7 +50,6 @@ function L.ParsedNoteEvents:new(instance)
     instance.channel = {}
     instance.note = {}
     instance.velocity = {}
-    instance.totalEvents = 16
     return instance
 end
 
@@ -93,7 +92,6 @@ function L.MidiNotes:new(instance)
     instance.velocity = {}
     instance.trackEndTime = {}
     instance.totalActive = {}
-    instance.loopAt = 8
     return instance
 end
 

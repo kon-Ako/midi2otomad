@@ -12,6 +12,10 @@ local M = {}
 ---@field wasPressed boolean    whether the note was ever active
 ---@field wasReleased boolean   whether the note has ended being pressed
 ---@field isPressed boolean     whether the note is currently active or not
+---@field anim number           sustain divided by latest length track
+---@field animIndex integer     index accounted by latest delayIndex
+---@field animSign integer      sign used to multiply animEased
+---@field animEased number      anim processed through latest easing function
 M.PlayData = {
     currentFrame = 0,
     index = 1,
@@ -19,7 +23,11 @@ M.PlayData = {
     sustNorm = 0,
     wasPressed = false,
     wasReleased = false,
-    isPressed = false
+    isPressed = false,
+    anim = 0,
+    animIndex = 1,
+    animSign = 1,
+    animEased = 0
 }
 M.PlayData.__index = M.PlayData
 
@@ -38,6 +46,19 @@ function M.PlayData:new(instance)
     instance.isPressed = false
     return instance
 end
+
+---Returns the inside of PlayData
+---@return string s     All value with explanation
+function M.PlayData:tostring()
+    return "At frame: "..self.currentFrame.." / "..M.totFrame..
+    "\nPlaying note #: "..self.index..
+    "\nSustain: "..(math.floor(self.sustain*100)/100)..
+    "\nNormalized: "..(math.floor(self.sustNorm*100)/100)..
+    "\nNote is currently pressed: "..tostring(self.isPressed)..
+    "\nNote was ever pressed: "..tostring(self.wasPressed)..
+    "\nNote was ever released:"..tostring(self.wasReleased)
+end
+M.PlayData.__tostring = M.PlayData.tostring
 
 ---@class SequencedImage        Used to store some properties of filepath
 ---@field pathGeneral string    File path without the numbers and type
@@ -243,16 +264,12 @@ function M.findLatestNote(currentTime, ListNotes, lastIndexRead)
 end
 
 M.bufferNote = M.PlayData:new()
----Returns the play data of the given note.
+---Updates the PlayData's value to that of given index. Returns the play data of the given note.
 ---@param currentTime timeBeat  time in beats
 ---@param listNotes MidiNotes   list of notes, decoded
 ---@param index integer         index to play
 ---@param instance? PlayData    the buffer table to store value; default to the M.bufferNote
----@return timeBeat sustain     the time since the note started was pressed. negative if it is upcoming note.
----@return number sustainNorm   the sustain, divided by the length of the note
----@return boolean isPressed    whether the note is currently active or not
----@return boolean wasPressed   whether the note was ever active
----@return boolean wasReleased  whether the note has ended being pressed
+---@return PlayData instance    The updated PlayData table
 function M.playNote(currentTime, listNotes, index, instance)
     instance = instance or M.bufferNote
     instance.currentFrame = M.curFrame
@@ -261,27 +278,22 @@ function M.playNote(currentTime, listNotes, index, instance)
     instance.wasPressed = (instance.sustNorm >= 0)
     instance.wasReleased = (instance.sustNorm >= 1)
     instance.isPressed = (not instance.wasReleased) and instance.wasPressed
-    return instance.sustain, instance.sustNorm, instance.isPressed, instance.wasPressed, instance.wasReleased
+    return instance
 end
 
----Returns the play data of the latest note.
+---Updates the PlayData's value to that of latest index. Returns the play data of the given note.
 ---@param currentTime timeBeat      time in beats
 ---@param ListNotes MidiNotes       list of notes, decoded
 ---@param lastIndexRead? integer    index to start calculation from
 ---@param instance? PlayData        the buffer table to store value; default to the M.bufferNote
----@return integer index            index to play
----@return number sustain           the time since the note started was pressed. negative if it is upcoming note.
----@return number sustNorm          the sustain, divided by the length of the note
----@return boolean isPressed        whether the note is currently active or not
----@return boolean wasPressed       whether the note was ever active
----@return boolean wasReleased      whether the note has ended being pressed
+---@return PlayData instance        The updated PlayData table
 function M.playLatestNote(currentTime, ListNotes, lastIndexRead, instance)
     instance = instance or M.bufferNote
     if(instance.currentFrame ~= M.curFrame or instance == M.bufferNote) then
         instance.index = M.findLatestNote(currentTime, ListNotes, lastIndexRead)
         M.playNote(currentTime, ListNotes, instance.index, instance)
     end
-    return instance.index, instance.sustain, instance.sustNorm, instance.isPressed, instance.wasPressed, instance.wasReleased
+    return instance
 end
 
 return M

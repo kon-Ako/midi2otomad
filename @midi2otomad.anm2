@@ -55,7 +55,7 @@ end
 
 O.saveCacheMidi(pathMidi)
 local arr = O.cacheMidi[pathMidi]
-O.saveBufferLatestNote(M.curBeat, arr, pathMidi)
+O.saveLatestNote(M.curBeat, arr, pathMidi)
 
 if(isDebug) then
     local aa, ab, ac, ad = O.bufferPlayData[obj.layer].index, O.bufferPlayData[obj.layer].sustain, O.bufferPlayData[obj.layer].sustNorm, O.bufferPlayData[obj.layer].isPressed
@@ -98,7 +98,7 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local a,b,c,d = O.loadBufferLatestNote(pathMidi)
+local a = O.loadBufferLatestNote(pathMidi).index
 a = (a+delayIndex)%2
 if(byGrid) then
     obj.rx=180*a*vertical
@@ -123,7 +123,7 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local a,b,c,isPressed = O.loadBufferLatestNote(pathMidi)
+local isPressed = O.loadBufferLatestNote(pathMidi).isPressed
 
 if( isPressed == reverse ) then
     obj.alpha = 0
@@ -148,19 +148,17 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local progress, anim, ind, sus, susN, isP = O.calculateProgress(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
+local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
+local p = N.animEased
 
-obj.ox = obj.ox + x*progress
-obj.oy = obj.oy + y*progress
+obj.ox = obj.ox + x*p
+obj.oy = obj.oy + y*p
 
 @M2O標準描画
 --label:MIDI2OTOMAD
 --track@x:X,-5000,5000,0,0.01
 --track@y:Y,-5000,5000,0,0.01
 --track@z:Z,-5000,5000,0,0.01
---track@cx:中心X,-5000,5000,0,0.01
---track@cy:中心Y,-5000,5000,0,0.01
---track@cz:中心Z,-5000,5000,0,0.01
 --track@rx:X軸回転,-3600,3600,0,0.01
 --track@ry:Y軸回転,-3600,3600,0,0.01
 --track@rz:Z軸回転,-3600,3600,0,0.01
@@ -182,25 +180,22 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local progress, anim, ind, sus, susN, isP = O.calculateProgress(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
---[[
-obj.cx = cx
-obj.cy = cy
-obj.cz = cz
-]]
-obj.ox = obj.ox + x*progress
-obj.oy = obj.oy + y*progress
-obj.oz = obj.oz + z*progress
+local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
+local p = N.animEased
 
-obj.rx = obj.rx + rx*progress
-obj.ry = obj.ry + ry*progress
-obj.rz = obj.rz + rz*progress
+obj.ox = obj.ox + x*p
+obj.oy = obj.oy + y*p
+obj.oz = obj.oz + z*p
 
-obj.sx = obj.sx * (zoom/100) * (1 - math.max(0, aspect/100*progress))
-obj.sy = obj.sy * (zoom/100) * (1 - math.max(0, aspect/-100*progress))
+obj.rx = obj.rx + rx*p
+obj.ry = obj.ry + ry*p
+obj.rz = obj.rz + rz*p
+
+obj.sx = obj.sx * (zoom/100) * (1 - math.max(0, aspect/100*p))
+obj.sy = obj.sy * (zoom/100) * (1 - math.max(0, aspect/-100*p))
 obj.sz = obj.sz * (zoom/100)
 
-obj.alpha = obj.alpha * (1-transparency/100*math.abs(progress))
+obj.alpha = obj.alpha * (1-transparency/100*math.abs(p))
 
 @M2O基本拡大
 --label:MIDI2OTOMAD
@@ -227,11 +222,12 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local progress, anim, ind, sus, susN, isP = O.calculateProgress(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
+local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
+local p = N.animEased
 
-obj.sx = obj.sx*zoom*(sx + (dzoom + dsx)*progress)/10000
-obj.sy = obj.sy*zoom*(sy + (dzoom + dsy)*progress)/10000
-obj.sz = obj.sz*zoom*(sz + (dzoom + dsz)*progress)/10000
+obj.sx = obj.sx*zoom*(sx + (dzoom + dsx)*p)/10000
+obj.sy = obj.sy*zoom*(sy + (dzoom + dsy)*p)/10000
+obj.sz = obj.sz*zoom*(sz + (dzoom + dsz)*p)/10000
 
 @M2Oステップ回転
 --label:MIDI2OTOMAD
@@ -253,9 +249,9 @@ local L = O.MidiToAnalyzer
 
 divisions = (divisions == 0) and 99999 or divisions
 
-local progress, anim, ind, sus, susN, isP = O.calculateProgress(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
+local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
 
-obj.rz = obj.rz + (360/divisions*(ind))%360 - 360/divisions*progress
+obj.rz = obj.rz + (360/divisions*(N.animIndex))%360 - 360/divisions*N.animEased
 
 @M2Oステップ拡大
 --label:MIDI2OTOMAD
@@ -279,13 +275,14 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local progress, anim, ind, sus, susN, isP = O.calculateProgress(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
+local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
+local p = N.animEased
 
-steps = (ind-1) % steps
+steps = (N.animIndex-1) % steps
 
-obj.sx = obj.sx*(1 + (dzoom + dsx)*(steps + progress)/100)
-obj.sy = obj.sy*(1 + (dzoom + dsy)*(steps + progress)/100)
-obj.sz = obj.sz*(1 + (dzoom + dsz)*(steps + progress)/100)
+obj.sx = obj.sx*(1 + (dzoom + dsx)*(steps + p)/100)
+obj.sy = obj.sy*(1 + (dzoom + dsy)*(steps + p)/100)
+obj.sz = obj.sz*(1 + (dzoom + dsz)*(steps + p)/100)
 
 @M2Oラスター
 --label:MIDI2OTOMAD
@@ -310,13 +307,14 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local progress, anim, ind, sus, susN, isP = O.calculateProgress(length, isNorm, delayIndex, easing, magnitude, isDecaying, 0, 0, pathMidi)
+local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, 0, 0, pathMidi)
+local p = N.animEased
 
 obj.effect("ラスター",
-"横幅",width + dwidth*progress,
-"高さ",height + dheight*progress,
+"横幅",width + dwidth*p,
+"高さ",height + dheight*p,
 "周期",interval,
-"縦ラスター",(vertical+isAlternating*ind)%2,
+"縦ラスター",(vertical+isAlternating*N.animIndex)%2,
 "ランダム振幅",randomW)
 
 @M2O色調補正
@@ -347,14 +345,15 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local progress, anim, ind, sus, susN, isP = O.calculateProgress(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
+local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
+local p = N.animEased
 
 obj.effect("色調補正",
-"明るさ", bright + dbright*progress,
-"コントラスト", contr + dcontr*progress,
-"色相", hue + dhue*progress,
-"輝度", lumin + dlumin*progress,
-"彩度", satur + dsatur*progress,
+"明るさ", bright + dbright*p,
+"コントラスト", contr + dcontr*p,
+"色相", hue + dhue*p,
+"輝度", lumin + dlumin*p,
+"彩度", satur + dsatur*p,
 "飽和する", oversaturate)
 
 @M2O斜めクリッピング
@@ -384,11 +383,12 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local progress, anim, ind, sus, susN, isP = O.calculateProgress(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
+local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
+local p = N.animEased
 
 obj.effect("斜めクリッピング",
-"中心X", cx + dcx*progress,
-"中心Y", cy + dcy*progress,
-"角度", angle + dangle*progress,
-"ぼかし", blur + dblur*progress,
-"幅", width + dwidth*progress)
+"中心X", cx + dcx*p,
+"中心Y", cy + dcy*p,
+"角度", angle + dangle*p,
+"ぼかし", blur + dblur*p,
+"幅", width + dwidth*p)

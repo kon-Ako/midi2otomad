@@ -79,14 +79,14 @@ end
 --label:MIDI2OTOMAD
 --font@font:フォント名,MS UI Gothic
 --track@size:サイズ,8,400,48
+--check@showNoteEvent:表示,0
+--group:MIDI項目,true
 --file@pathMidi:MIDIファイル
 --check@resetThis:再読み込み,0
---check@showNoteEvent:表示,0
 
 local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
-local arr = {}
 
 obj.setfont(font, size, 3)
 
@@ -97,12 +97,11 @@ else
         pathMidi = M.scriptPath.."library_M2O\\test.MID"
     end
 
-    O.saveCacheMidi(pathMidi, resetThis)
-    arr = O.cacheMidi[pathMidi]
-    O.saveBufferLatestNote(M.curBeat, arr, pathMidi)
+    local midiNotes = O.saveCacheMidi(pathMidi, resetThis)
+    local playData = O.saveLatestNote(M.curBeat, midiNotes, pathMidi)
 
     if(showNoteEvent == 1 ) then
-        local C = O.cacheMidi[pathMidi]
+        local C = midiNotes
         local str = pathMidi.."の解析結果:".."\nLoops At: "..C.loopAt
         str = str.."\ntime, length, note, velocity, channel, track"
 
@@ -124,7 +123,9 @@ end
 @M2O画像
 --label:MIDI2OTOMAD
 --file@pathObj:画像
+--group:MIDI項目,true
 --file@pathMidi:MIDIファイル
+--cehck@resetThis:MIDI再読み込み,false
 --check@isDebug:デバッグ,false
 
 local O = Akto.MidiToOtomad
@@ -135,15 +136,12 @@ if(pathMidi == "") then
     pathMidi = M.scriptPath.."library_M2O\\test.MID"
 end
 
-O.saveCacheMidi(pathMidi)
-local arr = O.cacheMidi[pathMidi]
-O.saveBufferLatestNote(M.curBeat, arr, pathMidi)
+
+local midiNotes = O.saveCacheMidi(pathMidi, resetThis)
+local playData = O.saveLatestNote(M.curBeat, midiNotes, pathMidi)
 
 if(isDebug) then
-    local index, sustain, sustNorm, isPressed = O.loadBufferLatestNote()
-    sustain = math.floor(sustain*100)/100
-    sustNorm = math.floor(sustNorm*100)/100
-    obj.load("text", index.." has "..arr.time[index].."\nPlaying now: "..sustain.."\nCompleted: "..sustNorm.."\nand is "..tostring(isPressed))
+    obj.load("text", playData:tostring())
 else
     obj.load("image",pathObj)
 end
@@ -151,10 +149,12 @@ end
 @M2O動画
 --label:MIDI2OTOMAD
 --file@pathObj:動画
---file@pathMidi:MIDIファイル
---check@isDebug:デバッグ,false
 --track@startTime:再生位置,0,10000,0,0.01
 --track@playSpeed:再生速度,-2000,2000,100,0.01
+--group:MIDI項目,true
+--file@pathMidi:MIDIファイル
+--cehck@resetThis:MIDI再読み込み,false
+--check@isDebug:デバッグ,false
 
 local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
@@ -164,28 +164,27 @@ if(pathMidi == "") then
     pathMidi = M.scriptPath.."library_M2O\\test.MID"
 end
 
-O.saveCacheMidi(pathMidi)
-local arr = O.cacheMidi[pathMidi]
-O.saveBufferLatestNote(M.curBeat, arr, pathMidi)
 
-local index, sustain, sustNorm, isPressed = O.loadBufferLatestNote()
+local midiNotes = O.saveCacheMidi(pathMidi, resetThis)
+local playData = O.saveLatestNote(M.curBeat, midiNotes, pathMidi)
+
 local vidLength = 0
 if(isDebug) then
-    sustain = math.floor(sustain*100)/100
-    sustNorm = math.floor(sustNorm*100)/100
-    obj.load("text", index.." has "..arr.time[index].."\nPlaying now: "..sustain.."\nCompleted: "..sustNorm.."\nand is "..tostring(isPressed))
+    obj.load("text", playData:tostring())
 else
-    vidLength = obj.load("movie",pathObj,math.max(startTime+playSpeed/100*M.unBeat(sustain), 0))
+    vidLength = obj.load("movie",pathObj,math.max(startTime+playSpeed/100*M.unBeat(playData.sustain), 0))
 end
 
 @M2O連番画像
 --label:MIDI2OTOMAD
 --file@pathObj:開始連番画像
---file@pathMidi:MIDIファイル
---check@isDebug:デバッグ,false
 --track@loopStart:ループ開始,0,10000,0,1
 --track@loopEnd:ループ終了,0,10000,0,1
 --track@playSpeed:再生速度,-2000,2000,100,0.01
+--group:MIDI項目,true
+--file@pathMidi:MIDIファイル
+--cehck@resetThis:MIDI再読み込み,false
+--check@isDebug:デバッグ,false
 
 local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
@@ -195,17 +194,16 @@ if(pathMidi == "") then
     pathMidi = M.scriptPath.."library_M2O\\test.MID"
 end
 
-O.saveCacheMidi(pathMidi)
-local arr = O.cacheMidi[pathMidi]
-O.saveBufferLatestNote(M.curBeat, arr, pathMidi)
-local index, sustain, sustNorm, isPressed = O.loadBufferLatestNote()
+
+local midiNotes = O.saveCacheMidi(pathMidi,resetThis)
+local playData = O.saveLatestNote(M.curBeat, midiNotes, pathMidi)
 
 if ( not O.bufferSeqImage[pathObj]) then
     O.bufferSeqImage[pathObj] = M.SequencedImage:new(pathObj)
 end
 local S = O.bufferSeqImage[pathObj]
 -- Separate path into path, number, and format
-local frame = S.startFrame + math.max(0, math.floor(M.unBeat(sustain)*playSpeed/100*obj.framerate))
+local frame = S.startFrame + math.max(0, math.floor(M.unBeat(playData.sustain)*playSpeed/100*obj.framerate))
 
 loopStart = math.max(loopStart, S.startFrame)
 loopEnd = math.min(S.finalFrame, math.max(loopStart, loopEnd)) + 1
@@ -226,4 +224,7 @@ if(isDebug) then
         end
         obj.draw(w/totFrameSqrt*(i%totFrameSqrt - (totFrameSqrt-1)/2),h/totFrameSqrt*(math.floor(i/totFrameSqrt) - (totFrameSqrt-1)/2), 0, 1/totFrameSqrt)
     end
+
+    obj.load("text", playData:tostring())
+    obj.draw(0,-h/3*2)
 end
