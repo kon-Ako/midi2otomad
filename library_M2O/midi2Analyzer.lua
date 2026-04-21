@@ -40,9 +40,6 @@ L.ParsedNoteEvents.__index = L.ParsedNoteEvents
 function L.ParsedNoteEvents:new(instance)
     instance = instance or {}
     setmetatable(instance, self)
-    instance.midiFormat = 0
-    instance.numTrack = 1
-    instance.isSMPTETime = false
     instance.track = {}
     instance.deltaTime = {}
     instance.absoluteTime = {}
@@ -53,7 +50,7 @@ function L.ParsedNoteEvents:new(instance)
     return instance
 end
 
----@class MidiNotes             table of list of notes easily calculated by Animator    MIDIの音符の一覧。簡単に計算できる
+---@class MidiNotes             table of list of notes easily calculated by Animator. Each index correspond to a note.
 ---@field time table            start time of each note in events
 ---@field length table          the length of each note is in events
 ---@field track table           the track each note is in
@@ -62,6 +59,7 @@ end
 ---@field notename table        (unimplemented) name of above
 ---@field velocity table        the velocity of each note
 ---@field trackEndTime table    length of each track; indices correspond to (track_number + 1) instead.
+---@field countActives table    Count of all the active notes when the note is pressed.
 ---@field loopAt integer        the largest value in trackEndTime
 L.MidiNotes = {
     time = {},
@@ -71,8 +69,8 @@ L.MidiNotes = {
     note = {},
     notename = {},
     velocity = {},
+    countActives = {},
     trackEndTime = {},
-    totalActive = {},
     loopAt = 8
 }
 L.MidiNotes.__index = L.MidiNotes
@@ -90,8 +88,8 @@ function L.MidiNotes:new(instance)
     instance.note = {}
     instance.notename = {}
     instance.velocity = {}
+    instance.countActives = {}
     instance.trackEndTime = {}
-    instance.totalActive = {}
     return instance
 end
 
@@ -312,7 +310,7 @@ function L.midiNoteDecode(dict, instance)
         curVl = dict.velocity[k] or curVl
         curAT = dict.absoluteTime[k]/dict.ppq or curAT
 
-        if(eventType == 9) then
+        if(eventType == 9 and (dict.velocity[k] ~= 0)) then
             key = string.format("%d_%d_%d", curTk, curCh, curNt)
             instance.time[ind] = curAT
             instance.track[ind] = curTk
@@ -323,9 +321,9 @@ function L.midiNoteDecode(dict, instance)
 
             L.bufferActiveNotes[key] = ind
             count = count + 1
-            instance.totalActive[ind] = count
+            instance.countActives[ind] = count
             ind = ind + 1
-        elseif(eventType == 8 or ((eventType == 9) and (dict.velocity[k] == 0))) then
+        elseif(eventType == 8 or eventType == 9) then
             key = string.format("%d_%d_%d", curTk, curCh, curNt)
             finishInd = L.bufferActiveNotes[key]
             if finishInd then
