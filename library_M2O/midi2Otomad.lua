@@ -8,8 +8,8 @@ O.bufferPlayState   = {} --Saves PlayState wtih file path as index. Is updated e
 O.bufferLayerPath   = {} --Saves the path of MIDI loaded by M object on layer at index
 O.bufferMisc        = {zoom = {}} --Other
 
-O.MidiToAnalyzer = require("library_M2O/midi2Analyzer")
 O.MidiToAnimator = require("library_M2O/midi2Animator")
+O.MidiToAnalyzer = O.MidiToAnimator.MidiToAnalyzer
 
 local L = O.MidiToAnalyzer
 local M = O.MidiToAnimator
@@ -46,7 +46,7 @@ function O.saveLatestNote(currentTime, listNotes, pathMidi)
     end
 
     if(not (O.bufferPlayState[pathMidi])) then
-        O.bufferPlayState[pathMidi] = M.PlayState.new()
+        O.bufferPlayState[pathMidi] = M.PlayState.new(listNotes)
     end
     local lastIndexRead = O.bufferPlayState[pathMidi].noteIndex
     return M.playLatestNote(currentTime, listNotes, lastIndexRead, O.bufferPlayState[pathMidi])
@@ -62,7 +62,7 @@ function O.loadBufferLatestNote(pathMidi)
     local N = O.bufferPlayState[pathMidi]
     if(not N) then
         obj.load("text", "selected MIDI is not loaded!\n選択したMIDIが読み込まれていません！")
-        N = M.PlayState.new()
+        N = M.PlayState.new(O.cacheMidi[pathMidi])
     end
     return N
 end

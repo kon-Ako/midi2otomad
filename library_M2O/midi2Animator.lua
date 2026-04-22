@@ -2,11 +2,31 @@ debug_print("Loading midi2Animator.lua")
 
 local M = {}
 
+--Default values
+
+M.scriptPath = "C:\\ProgramData\\aviutl2\\Script\\midi2otomad"
+M.ppq = 960
+M.bpm = 160
+M.mesPlus = 0
+M.framePlus = 0
+M.metre = 4
+
+M.curFrame  = 0
+M.totFrame  = 60
+M.curBeat   = 0
+M.curMes    = 0
+M.furBeat   = 0
+M.furMes    = 0
+
+--Is this layering appropriate...?
+M.MidiToAnalyzer = require("library_M2O/midi2Analyzer")
+
 ---@alias timeBeat number   time in unit of beats
 ---@alias timeSecond number time in unit of seconds. For exmle, obj.time
 
 ---@class PlayState             table of the values of note currenlty played.
----@fiedl filePath string       file path of the original MIDI file
+---@field source MidiNotes      pointer back to the original MidiNotes the PlayState will read from
+---@field filePath string       file path to the original MIDI file
 ---@field noteIndex integer     noteIndex of the note the data was taken from.
 ---@field sustain timeBeat      the time since the note started was pressed. negative if it is upcoming note.
 ---@field sustNorm number       the sustain, divided by the length of the note
@@ -18,6 +38,8 @@ local M = {}
 ---@field progressSign integer  sign used to multiply progressEased
 ---@field progressEased number  progress processed through latest easing function
 M.PlayState = {
+    source = M.MidiToAnalyzer.MidiNotes,
+    filePath = "",
     currentFrame = 0,
     noteIndex = 1,
     sustain = 0,
@@ -33,11 +55,13 @@ M.PlayState = {
 M.PlayState.__index = M.PlayState
 
 ---Create new PlayState
+---@param source MidiNotes      The source MidiNotes object the PlayState will update from.
 ---@param instance? table       If given, turns that table into MidiNotes instead of making new object
 ---@return PlayState instance   PlayState with default value
-function M.PlayState.new(instance)
+function M.PlayState.new(source, instance)
     instance = instance or {}
-    setmetatable(instance, self)
+    setmetatable(instance, M.PlayState)
+    instance.source = source
     instance.currentFrame = 0
     instance.noteIndex = 1
     instance.sustain = 0
@@ -60,6 +84,23 @@ function M.PlayState:tostring()
     "\nNote was ever released:"..tostring(self.wasReleased)
 end
 M.PlayState.__tostring = M.PlayState.tostring
+
+---Update the PlayState
+---@param currentBeat timeBeat      time in beats
+---@param noteIndex? integer|false  noteIndex to read; defaults to the latest note.
+---@param force? boolean            If true, will always update; else, only update when frame changed.
+function M.PlayState:update(currentBeat, noteIndex, force)
+    noteIndex = noteIndex or self.source:getLatestNoteIndex(currentBeat, self.noteIndex)
+    if(self.currentFrame ~= M.curFrame or force) then
+        self.noteIndex = noteIndex
+        self.currentFrame = M.curFrame
+        self.sustain = currentBeat - (self.source.time[noteIndex] or -1) --If note doesn't exist, starts at 1.
+        self.sustNorm = self.sustain / (self.source.length[noteIndex] or 1)
+        self.wasPressed = (self.sustNorm >= 0)
+        self.wasReleased = (self.sustNorm >= 1)
+        self.isPressed = (not self.wasReleased) and self.wasPressed
+    end
+end
 
 ---@class SequencedImage        Used to store some properties of filepath
 ---@field pathGeneral string    File path without the numbers and type
@@ -137,22 +178,6 @@ function M.SequencedImage:getCompletePath(frame)
     return string..frame..self.fileExtension
 end
 
---Default values
-
-M.scriptPath = "C:\\ProgramData\\aviutl2\\Script\\midi2otomad"
-M.ppq = 960
-M.bpm = 160
-M.mesPlus = 0
-M.framePlus = 0
-M.metre = 4
-
-M.curFrame  = 0
-M.totFrame  = 60
-M.curBeat   = 0
-M.curMes    = 0
-M.furBeat   = 0
-M.furMes    = 0
-
 --List of easing functions
 M.ease = {
     --linear
@@ -227,6 +252,7 @@ end
 ---@param ListNotes MidiNotes       table of note events, decoded
 ---@param lastIndexRead? integer    index to start calculation from
 ---@return integer pos              the latest note
+---@deprecated
 function M.findLatestNote(currentTime, ListNotes, lastIndexRead)
     lastIndexRead = lastIndexRead or 1
 
@@ -271,6 +297,7 @@ M.bufferNote = M.PlayState.new()
 ---@param noteIndex integer     noteIndex to play
 ---@param instance? PlayState   the buffer table to store value; default to the M.bufferNote
 ---@return PlayState instance   the updated PlayState table
+---@deprecated
 function M.playNote(currentTime, listNotes, noteIndex, instance)
     instance = instance or M.bufferNote
     instance.currentFrame = M.curFrame
@@ -288,6 +315,7 @@ end
 ---@param lastIndexRead? integer    noteIndex to start calculation from
 ---@param instance? PlayState       the buffer table to store value; default to the M.bufferNote
 ---@return PlayState instance       the updated PlayState table
+---@deprecated
 function M.playLatestNote(currentTime, ListNotes, lastIndexRead, instance)
     instance = instance or M.bufferNote
     if(instance.currentFrame ~= M.curFrame or instance == M.bufferNote) then

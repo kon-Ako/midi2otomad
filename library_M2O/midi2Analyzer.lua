@@ -3,6 +3,7 @@ debug_print("Loading midi2Analyzer.lua")
 local bit = require("bit")
 local L = {}
 
+L.cacheMidiNotes = {}
 
 ---@alias bytesAsString string  The string read with io.open from MIDI file.
 
@@ -51,6 +52,7 @@ function L.RawNoteEvents.new(instance)
 end
 
 ---@class MidiNotes             table of list of notes easily calculated by Animator. Each index correspond to a note.
+---@field filePath string       file path to the original MIDI file
 ---@field time table            start time of each note in events
 ---@field length table          the length of each note is in events
 ---@field track table           the track each note is in
@@ -62,6 +64,7 @@ end
 ---@field countActives table    Count of all the active notes when the note is pressed.
 ---@field loopAt integer        the largest value in trackEndTime
 L.MidiNotes = {
+    filePath = "",
     time = {},
     length = {},
     track = {},
@@ -76,11 +79,14 @@ L.MidiNotes = {
 L.MidiNotes.__index = L.MidiNotes
 
 ---Creates new MidiNotes.
+---@param filePath string       File Path
 ---@param instance? table       If given, turns that table into MidiNotes instead of making new object
 ---@return MidiNotes instance   MidiNotes with default value
-function L.MidiNotes.new(instance)
+function L.MidiNotes.new(filePath, instance)
     instance = instance or {}
+    L.cacheMidiNotes[filePath] = instance
     setmetatable(instance, L.MidiNotes)
+    instance.filePath = filePath
     instance.time = {}
     instance.length = {}
     instance.track = {}
@@ -291,14 +297,15 @@ function L.midiDecode(string, instance)
     return dict
 end
 
-L.bufferMidiNotes = L.MidiNotes.new()
+L.MidiNotes.new("buffer")
 L.bufferActiveNotes = {}    --temporary list used by L.midiNoteDecode for notes that are started (eventType == 9) yet not ended (eventType == 8)
 
 ---@param dict RawNoteEvents    MIDI deconstructed into table.  テーブルとして解体したMIDI
 ---@param instance? MidiNotes   A buffer table to update
+---@param pathMidi string       file path to the original MIDI file
 ---@return MidiNotes instance   table of lists of notes easily calculated by Animator   MIDIの音符の一覧。簡単に計算できる
-function L.midiNoteDecode(dict, instance)
-    instance = instance or L.MidiNotes.new()
+function L.midiNoteDecode(dict, instance, pathMidi)
+    instance = instance or L.MidiNotes.new(pathMidi)
     local ind, finishInd = 1, 1
     local eventType, curTk, curCh, curNt, curVl, curAT, key, count = 9, 0, 0, 0, 0, 0, "", 0
 
@@ -352,8 +359,53 @@ end
 function L.midiToRhythm(pathMidi, instance)
     local string = L.midiOpenAsString(pathMidi)
     local dict = L.midiDecode(string)
-    local rym = L.midiNoteDecode(dict, instance)
+    local rym = L.midiNoteDecode(dict, instance, pathMidi)
+    rym.filePath = pathMidi
     return rym
 end
+
+---Get the latest note played at given beat.
+---@param currentBeat timeBeat      time in beats
+---@param lastIndexRead? integer    index to check first
+---@return integer lastIndexRead    the index of latest note
+function L.MidiNotes:getLatestNoteIndex(currentBeat, lastIndexRead)
+    lastIndexRead = lastIndexRead or 1
+
+    --Immediately check the likely indices
+
+    local val1 = self.time[lastIndexRead] or 0
+    local val2 = self.time[lastIndexRead+1] or val1*2+8
+    local val3 = self.time[lastIndexRead+2] or val2*2+8
+    if((val1 <= currentBeat) and (currentBeat < val2)) then
+        --Keep current index
+        return lastIndexRead
+    elseif((val2 <= currentBeat) and (currentBeat < val3)) then
+        --Move to the next index
+        return lastIndexRead + 1
+    elseif(currentBeat < self.time[1]) then
+        --Return 0 if current beat is before the first note
+        return 0
+    elseif(currentBeat < val1) then
+        --Set lastIndexRead back to 1 if played back.
+        lastIndexRead = 1
+    end
+
+    local iMin, iMax= lastIndexRead, #self.time-1
+    --Perform binary search
+    while(iMin <= iMax) do
+        lastIndexRead = math.floor((iMin + iMax)/2)
+        val1, val2 = self.time[lastIndexRead], self.time[lastIndexRead+1]
+        if((val1 <= currentBeat) and (currentBeat < val2)) then
+            return lastIndexRead
+        elseif( val1 < currentBeat) then
+            iMin = lastIndexRead + 1
+        else
+            iMax = lastIndexRead - 1
+        end
+    end
+
+    return lastIndexRead
+end
+
 
 return L
