@@ -6,7 +6,7 @@ local L = {}
 
 ---@alias bytesAsString string  The string read with io.open from MIDI file.
 
----@class ParsedNoteEvents           
+---@class RawNoteEvents           
 ---@field midiFormat integer    Format of MIDI. 0,1, or 2
 ---@field numTrack integer      Numbers of tracks loaded in MIDI
 ---@field isSMPTETime boolean   Whether the MIDI uses SMPTE time, which isn't supported by script.
@@ -19,7 +19,7 @@ local L = {}
 ---@field note table            integer, the pitch of note event
 ---@field velocity table        integer, the velocity of note event
 ---@field totalEvents integer   total of events recorded in raw.
-L.ParsedNoteEvents = {
+L.RawNoteEvents = {
     midiFormat = 0,
     numTrack = 1,
     isSMPTETime = false,
@@ -32,14 +32,14 @@ L.ParsedNoteEvents = {
     velocity = {},
     totalEvents = 16
 }
-L.ParsedNoteEvents.__index = L.ParsedNoteEvents
+L.RawNoteEvents.__index = L.RawNoteEvents
 
----Creates new ParsedNoteEvents.
----@param instance? table               If given, turns that table into ParsedNoteEvents instead of making new object
----@return ParsedNoteEvents instance    ParsedNoteEvents with default values
-function L.ParsedNoteEvents:new(instance)
+---Creates new RawNoteEvents.
+---@param instance? table            If given, turns that table into RawNoteEvents instead of making new object
+---@return RawNoteEvents instance    RawNoteEvents with default values
+function L.RawNoteEvents.new(instance)
     instance = instance or {}
-    setmetatable(instance, self)
+    setmetatable(instance, L.RawNoteEvents)
     instance.track = {}
     instance.deltaTime = {}
     instance.absoluteTime = {}
@@ -78,9 +78,9 @@ L.MidiNotes.__index = L.MidiNotes
 ---Creates new MidiNotes.
 ---@param instance? table       If given, turns that table into MidiNotes instead of making new object
 ---@return MidiNotes instance   MidiNotes with default value
-function L.MidiNotes:new(instance)
+function L.MidiNotes.new(instance)
     instance = instance or {}
-    setmetatable(instance, self)
+    setmetatable(instance, L.MidiNotes)
     instance.time = {}
     instance.length = {}
     instance.track = {}
@@ -203,14 +203,14 @@ function L.midiOpenAsString(pathMidi)
     return str
 end
 
-L.bufferParsedNoteEvents = L.ParsedNoteEvents:new()
+L.bufferRawNoteEvents = L.RawNoteEvents.new()
 
 ---Decode string extracted from MIDI into table of note events. 
----@param string bytesAsString          MIDI as string of binary.       迫真!バイナリのStringと化したMIDI先輩
----@param instance? ParsedNoteEvents    A cache table to update
----@return ParsedNoteEvents tblMIDI     MIDI deconstructed into table.  テーブルとして解体したMIDI
+---@param string bytesAsString      MIDI as string of binary.       迫真!バイナリのStringと化したMIDI先輩
+---@param instance? RawNoteEvents   A cache table to update
+---@return RawNoteEvents tblMIDI    MIDI deconstructed into table.  テーブルとして解体したMIDI
 function L.midiDecode(string, instance)
-    local dict = L.ParsedNoteEvents:new(instance)
+    local dict = L.RawNoteEvents.new(instance)
     local currentSize = string:byte(7)*256 + string:byte(8)
     local curIndx = 1
     local pos = currentSize + 9
@@ -291,14 +291,14 @@ function L.midiDecode(string, instance)
     return dict
 end
 
-L.bufferMidiNotes = L.MidiNotes:new()
+L.bufferMidiNotes = L.MidiNotes.new()
 L.bufferActiveNotes = {}    --temporary list used by L.midiNoteDecode for notes that are started (eventType == 9) yet not ended (eventType == 8)
 
----@param dict ParsedNoteEvents MIDI deconstructed into table.  テーブルとして解体したMIDI
+---@param dict RawNoteEvents    MIDI deconstructed into table.  テーブルとして解体したMIDI
 ---@param instance? MidiNotes   A buffer table to update
 ---@return MidiNotes instance   table of lists of notes easily calculated by Animator   MIDIの音符の一覧。簡単に計算できる
 function L.midiNoteDecode(dict, instance)
-    instance = instance or L.MidiNotes:new()
+    instance = instance or L.MidiNotes.new()
     local ind, finishInd = 1, 1
     local eventType, curTk, curCh, curNt, curVl, curAT, key, count = 9, 0, 0, 0, 0, 0, "", 0
 

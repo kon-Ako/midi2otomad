@@ -5,40 +5,41 @@ local M = {}
 ---@alias timeBeat number   time in unit of beats
 ---@alias timeSecond number time in unit of seconds. For exmle, obj.time
 
----@class PlayData              table of the values of note currenlty played.
----@field index integer         index of the note the data was taken from.
+---@class PlayState             table of the values of note currenlty played.
+---@fiedl filePath string       file path of the original MIDI file
+---@field noteIndex integer     noteIndex of the note the data was taken from.
 ---@field sustain timeBeat      the time since the note started was pressed. negative if it is upcoming note.
 ---@field sustNorm number       the sustain, divided by the length of the note
 ---@field wasPressed boolean    whether the note was ever active
 ---@field wasReleased boolean   whether the note has ended being pressed
 ---@field isPressed boolean     whether the note is currently active or not
----@field anim number           sustain divided by latest length track
----@field animIndex integer     index accounted by latest delayIndex
----@field animSign integer      sign used to multiply animEased
----@field animEased number      anim processed through latest easing function
-M.PlayData = {
+---@field progress number       sustain divided by latest length track
+---@field progressIndex integer noteIndex accounted by latest delayIndex
+---@field progressSign integer  sign used to multiply progressEased
+---@field progressEased number  progress processed through latest easing function
+M.PlayState = {
     currentFrame = 0,
-    index = 1,
+    noteIndex = 1,
     sustain = 0,
     sustNorm = 0,
     wasPressed = false,
     wasReleased = false,
     isPressed = false,
-    anim = 0,
-    animIndex = 1,
-    animSign = 1,
-    animEased = 0
+    progress = 0,
+    progressIndex = 1,
+    progressSign = 1,
+    progressEased = 0
 }
-M.PlayData.__index = M.PlayData
+M.PlayState.__index = M.PlayState
 
----Create new PlayData
+---Create new PlayState
 ---@param instance? table       If given, turns that table into MidiNotes instead of making new object
----@return PlayData instance    PlayData with default value
-function M.PlayData:new(instance)
+---@return PlayState instance   PlayState with default value
+function M.PlayState.new(instance)
     instance = instance or {}
     setmetatable(instance, self)
     instance.currentFrame = 0
-    instance.index = 1
+    instance.noteIndex = 1
     instance.sustain = 0
     instance.sustNorm = 0
     instance.wasPressed = false
@@ -47,18 +48,18 @@ function M.PlayData:new(instance)
     return instance
 end
 
----Returns the inside of PlayData
+---Returns the inside of PlayState
 ---@return string s     All value with explanation
-function M.PlayData:tostring()
+function M.PlayState:tostring()
     return "At frame: "..self.currentFrame.." / "..M.totFrame..
-    "\nPlaying note #: "..self.index..
+    "\nPlaying note #: "..self.noteIndex..
     "\nSustain: "..(math.floor(self.sustain*100)/100)..
     "\nNormalized: "..(math.floor(self.sustNorm*100)/100)..
     "\nNote is currently pressed: "..tostring(self.isPressed)..
     "\nNote was ever pressed: "..tostring(self.wasPressed)..
     "\nNote was ever released:"..tostring(self.wasReleased)
 end
-M.PlayData.__tostring = M.PlayData.tostring
+M.PlayState.__tostring = M.PlayState.tostring
 
 ---@class SequencedImage        Used to store some properties of filepath
 ---@field pathGeneral string    File path without the numbers and type
@@ -81,7 +82,7 @@ M.SequencedImage.__index = M.SequencedImage
 
 ---Create new SequencedImage
 ---@param pathObj string            Path of the Sequenced Image
----@param instance? table           If given, turns that table into ParsedNoteEvents instead of making new object
+---@param instance? table           If given, turns that table into RawNoteEvents instead of making new object
 ---@return SequencedImage instance  Used to store some properties of filepath
 function M.SequencedImage:new(pathObj, instance)
     instance = instance or {}
@@ -155,9 +156,9 @@ M.furMes    = 0
 --List of easing functions
 M.ease = {
     --linear
-    ---@param x number      progress of animation. Assumes it starts at 0 and ends at 1.
-    ---@param m number      Magnitude used in some of easing.
-    ---@return number anim  progress eased by appropraiate function. If index%3 is 2, it is a bounce: achieves 1 at middle and 0 at either end.
+    ---@param x number          progress of animation. Assumes it starts at 0 and ends at 1.
+    ---@param m number          Magnitude used in some of easing.
+    ---@return number progress  progress eased by appropraiate function. If index%3 is 2, it is a bounce: achieves 1 at middle and 0 at either end.
     [1] = function(x, m) return x end,
     --triangle
     [2] = function(x, m) return 1-math.abs(2*x-1) end,
@@ -193,10 +194,10 @@ M.ease = {
     [17] = function(x, m) return math.sin(x*math.pi) end
 }
 ---Calls the above functions, and forces x to be [0,1]
----@param x number      progress of animation. Assumes it starts at 0 and ends at 1.
----@param m number    Magnitude used in some of easing.
----@param index integer The index of easing function.
----@return number anim  progress eased by appropraiate function. If index%3 is 2, it is a bounce: achieves 1 at middle and 0 at either end.
+---@param x number          progress of animation. Assumes it starts at 0 and ends at 1.
+---@param m number          Magnitude used in some of easing.
+---@param index integer     The index of easing function.
+---@return number progress  progress eased by appropraiate function. If index%3 is 2, it is a bounce: achieves 1 at middle and 0 at either end.
 function M.ease.force(x, m, index)
     return M.ease[index](math.max(0, math.min(1, x)),m)
 end
@@ -263,35 +264,35 @@ function M.findLatestNote(currentTime, ListNotes, lastIndexRead)
     return pos
 end
 
-M.bufferNote = M.PlayData:new()
----Updates the PlayData's value to that of given index. Returns the play data of the given note.
+M.bufferNote = M.PlayState.new()
+---Updates the PlayState's value to that of given index. Returns the play data of the given note.
 ---@param currentTime timeBeat  time in beats
 ---@param listNotes MidiNotes   list of notes, decoded
----@param index integer         index to play
----@param instance? PlayData    the buffer table to store value; default to the M.bufferNote
----@return PlayData instance    The updated PlayData table
-function M.playNote(currentTime, listNotes, index, instance)
+---@param noteIndex integer     noteIndex to play
+---@param instance? PlayState   the buffer table to store value; default to the M.bufferNote
+---@return PlayState instance   the updated PlayState table
+function M.playNote(currentTime, listNotes, noteIndex, instance)
     instance = instance or M.bufferNote
     instance.currentFrame = M.curFrame
-    instance.sustain = currentTime - (listNotes.time[index] or currentTime-1) --If note doesn't exist, defaults to 1
-    instance.sustNorm = instance.sustain/(listNotes.length[index] or 1)
+    instance.sustain = currentTime - (listNotes.time[noteIndex] or currentTime-1) --If note doesn't exist, defaults to 1
+    instance.sustNorm = instance.sustain/(listNotes.length[noteIndex] or 1)
     instance.wasPressed = (instance.sustNorm >= 0)
     instance.wasReleased = (instance.sustNorm >= 1)
     instance.isPressed = (not instance.wasReleased) and instance.wasPressed
     return instance
 end
 
----Updates the PlayData's value to that of latest index. Returns the play data of the given note.
+---Updates the PlayState's value to that of latest noteIndex. Returns the play data of the given note.
 ---@param currentTime timeBeat      time in beats
 ---@param ListNotes MidiNotes       list of notes, decoded
----@param lastIndexRead? integer    index to start calculation from
----@param instance? PlayData        the buffer table to store value; default to the M.bufferNote
----@return PlayData instance        The updated PlayData table
+---@param lastIndexRead? integer    noteIndex to start calculation from
+---@param instance? PlayState       the buffer table to store value; default to the M.bufferNote
+---@return PlayState instance       the updated PlayState table
 function M.playLatestNote(currentTime, ListNotes, lastIndexRead, instance)
     instance = instance or M.bufferNote
     if(instance.currentFrame ~= M.curFrame or instance == M.bufferNote) then
-        instance.index = M.findLatestNote(currentTime, ListNotes, lastIndexRead)
-        M.playNote(currentTime, ListNotes, instance.index, instance)
+        instance.noteIndex = M.findLatestNote(currentTime, ListNotes, lastIndexRead)
+        M.playNote(currentTime, ListNotes, instance.noteIndex, instance)
     end
     return instance
 end

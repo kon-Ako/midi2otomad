@@ -4,7 +4,7 @@ local O = {}
 
 O.cacheMidi         = {} --Save MidiNotes with file path as index.
 O.bufferSeqImage    = {} --Save information about sequenced images.
-O.bufferPlayData    = {} --Saves PlayData wtih file path as index. Is updated ev ery frame as animation changes.
+O.bufferPlayState   = {} --Saves PlayState wtih file path as index. Is updated ev ery frame as animation changes.
 O.bufferLayerPath   = {} --Saves the path of MIDI loaded by M object on layer at index
 O.bufferMisc        = {zoom = {}} --Other
 
@@ -32,11 +32,11 @@ function O.saveCacheMidi(pathMidi, resetThis)
     return O.cacheMidi[pathMidi]
 end
 
----Updates or creates PlayData at the given path. Executed every frame of M2O objects.
+---Updates or creates PlayState at the given path. Executed every frame of M2O objects.
 ---@param currentTime timeBeat  time in beats
 ---@param listNotes MidiNotes   list of notes, decoded
 ---@param pathMidi? string      The path of midis
----@return PlayData instance    The updated PlayData table
+---@return PlayState instance   The updated PlayState table
 function O.saveLatestNote(currentTime, listNotes, pathMidi)
 
     if((not pathMidi) or pathMidi == "") then
@@ -45,24 +45,24 @@ function O.saveLatestNote(currentTime, listNotes, pathMidi)
         O.bufferLayerPath[obj.layer] = pathMidi
     end
 
-    if(not (O.bufferPlayData[pathMidi])) then
-        O.bufferPlayData[pathMidi] = M.PlayData:new()
+    if(not (O.bufferPlayState[pathMidi])) then
+        O.bufferPlayState[pathMidi] = M.PlayState.new()
     end
-    local lastIndexRead = O.bufferPlayData[pathMidi].index
-    return M.playLatestNote(currentTime, listNotes, lastIndexRead, O.bufferPlayData[pathMidi])
+    local lastIndexRead = O.bufferPlayState[pathMidi].noteIndex
+    return M.playLatestNote(currentTime, listNotes, lastIndexRead, O.bufferPlayState[pathMidi])
 end
 
----Returns the PlayData out given path
+---Returns the PlayState out given path
 ---@param pathMidi? string      Path to the MIDI originally loaded and read from
----@return PlayData N           PlayData corresponding to given path
+---@return PlayState N          PlayState corresponding to given path
 function O.loadBufferLatestNote(pathMidi)
     if((not pathMidi) or pathMidi == "") then
         pathMidi = O.bufferLayerPath[obj.layer]
     end
-    local N = O.bufferPlayData[pathMidi]
+    local N = O.bufferPlayState[pathMidi]
     if(not N) then
         obj.load("text", "selected MIDI is not loaded!\n選択したMIDIが読み込まれていません！")
-        N = M.PlayData:new()
+        N = M.PlayState.new()
     end
     return N
 end
@@ -70,22 +70,21 @@ end
 ---Reprocess the sustain of note based on information from track bar.
 ---@param length number             length of animation, in beats
 ---@param isNorm boolean            if true, anim uses sustNorm instead of sustain
----@param delayIndex integer        index is calculated with this number added instead of actual number.
+---@param delayIndex integer        noteIndex is calculated with this number added instead of actual number.
 ---@param easing integer            specifies which easing function is used
 ---@param magnitude number          magnitude of easing function
 ---@param isDecaying integer        0 or 1. If 1, animEased transition from 1→0 instead of 0→1
----@param isSwitching integer       0 or 1. If 1, animEased swtich between decay and grow every index.
----@param isAlternating integer     0 or 1. If 1, index is multiplied by -1 every other index.
+---@param isSwitching integer       0 or 1. If 1, animEased swtich between decay and grow every noteIndex.
+---@param isAlternating integer     0 or 1. If 1, noteIndex is multiplied by -1 every other noteIndex.
 ---@param pathMidi? string          Path to the MIDI originally loaded and read from
----@return PlayData instance        PlayData with updated animation properties
+---@return PlayState instance       PlayState with updated animation properties
 function O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
     local N = O.loadBufferLatestNote(pathMidi)
-    N.animIndex = N.index + delayIndex
-    isDecaying = (isDecaying + isSwitching*N.animIndex)%2
-    N.animSign = 1-2*(isAlternating*N.animIndex%2)
-    local anim = isNorm and N.sustNorm or N.sustain
-    N.anim = (length == 0) and 1 or anim/length --if length is 0, finish immediately; else, N.anim is squished by length
-    N.animEased = (isDecaying+(1-2*isDecaying)*(M.ease.force(N.anim, magnitude, easing)))*N.animSign
+    N.progressIndex = N.noteIndex + delayIndex
+    isDecaying = (isDecaying + isSwitching*N.progressIndex)%2
+    N.progressSign = 1-2*(isAlternating*N.progressIndex%2)
+    N.progress = ((length == 0) and 1) or (isNorm and N.sustNorm or N.sustain)/length --if length is 0, finish immediately; else, N.progress is squished by length
+    N.progressEased = (isDecaying+(1-2*isDecaying)*(M.ease.force(N.progress, magnitude, easing)))*N.progressSign
     return N
 end
 

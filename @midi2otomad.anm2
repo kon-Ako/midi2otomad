@@ -58,7 +58,7 @@ local arr = O.cacheMidi[pathMidi]
 O.saveLatestNote(M.curBeat, arr, pathMidi)
 
 if(isDebug) then
-    local aa, ab, ac, ad = O.bufferPlayData[obj.layer].index, O.bufferPlayData[obj.layer].sustain, O.bufferPlayData[obj.layer].sustNorm, O.bufferPlayData[obj.layer].isPressed
+    local aa, ab, ac, ad = O.bufferPlayState[obj.layer].noteIndex, O.bufferPlayState[obj.layer].sustain, O.bufferPlayState[obj.layer].sustNorm, O.bufferPlayState[obj.layer].isPressed
     ab = math.floor(ab*100)/100
     ac = math.floor(ac*100)/100
     local ae = ad and "T" or "F"
@@ -98,7 +98,7 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local a = O.loadBufferLatestNote(pathMidi).index
+local a = O.loadBufferLatestNote(pathMidi).noteIndex
 a = (a+delayIndex)%2
 if(byGrid) then
     obj.rx=180*a*vertical
@@ -149,7 +149,7 @@ local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
 local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
-local p = N.animEased
+local p = N.progressEased
 
 obj.ox = obj.ox + x*p
 obj.oy = obj.oy + y*p
@@ -181,7 +181,7 @@ local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
 local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
-local p = N.animEased
+local p = N.progressEased
 
 obj.ox = obj.ox + x*p
 obj.oy = obj.oy + y*p
@@ -223,7 +223,7 @@ local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
 local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
-local p = N.animEased
+local p = N.progressEased
 
 obj.sx = obj.sx*zoom*(sx + (dzoom + dsx)*p)/10000
 obj.sy = obj.sy*zoom*(sy + (dzoom + dsy)*p)/10000
@@ -251,7 +251,7 @@ divisions = (divisions == 0) and 99999 or divisions
 
 local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
 
-obj.rz = obj.rz + (360/divisions*(N.animIndex))%360 - 360/divisions*N.animEased
+obj.rz = obj.rz + (360/divisions*(N.progressIndex))%360 - 360/divisions*N.progressEased
 
 @M2Oステップ拡大
 --label:MIDI2OTOMAD
@@ -276,9 +276,9 @@ local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
 local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
-local p = N.animEased
+local p = N.progressEased
 
-steps = (N.animIndex-1) % steps
+steps = (N.progressIndex-1) % steps
 
 obj.sx = obj.sx*(1 + (dzoom + dsx)*(steps + p)/100)
 obj.sy = obj.sy*(1 + (dzoom + dsy)*(steps + p)/100)
@@ -308,13 +308,13 @@ local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
 local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, 0, 0, pathMidi)
-local p = N.animEased
+local p = N.progressEased
 
 obj.effect("ラスター",
 "横幅",width + dwidth*p,
 "高さ",height + dheight*p,
 "周期",interval,
-"縦ラスター",(vertical+isAlternating*N.animIndex)%2,
+"縦ラスター",(vertical+isAlternating*N.progressIndex)%2,
 "ランダム振幅",randomW)
 
 @M2O色調補正
@@ -346,7 +346,7 @@ local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
 local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
-local p = N.animEased
+local p = N.progressEased
 
 obj.effect("色調補正",
 "明るさ", bright + dbright*p,
@@ -384,7 +384,7 @@ local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
 local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
-local p = N.animEased
+local p = N.progressEased
 
 obj.effect("斜めクリッピング",
 "中心X", cx + dcx*p,
@@ -426,7 +426,7 @@ local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
 local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
-local p = N.animEased
+local p = N.progressEased
 
 obj.effect("マスク",
 "X",x + dx*p,
