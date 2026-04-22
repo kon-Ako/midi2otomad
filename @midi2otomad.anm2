@@ -54,8 +54,7 @@ if(pathMidi == "") then
 end
 
 O.saveCacheMidi(pathMidi)
-local arr = O.cacheMidi[pathMidi]
-O.saveLatestNote(M.curBeat, arr, pathMidi)
+O.saveLatestNote(M.curBeat, pathMidi)
 
 if(isDebug) then
     local aa, ab, ac, ad = O.bufferPlayState[obj.layer].noteIndex, O.bufferPlayState[obj.layer].sustain, O.bufferPlayState[obj.layer].sustNorm, O.bufferPlayState[obj.layer].isPressed

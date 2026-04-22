@@ -11,7 +11,7 @@ O.bufferMisc        = {zoom = {}} --Other
 O.MidiToAnimator = require("library_M2O/midi2Animator")
 O.MidiToAnalyzer = O.MidiToAnimator.MidiToAnalyzer
 
-local L = O.MidiToAnalyzer
+local L = O.MidiToAnimator.MidiToAnalyzer
 local M = O.MidiToAnimator
 
 ---Loads, decodes, and extract notes from MIDI file at path. Stores the notes in a cache with the file path as key.
@@ -20,24 +20,23 @@ local M = O.MidiToAnimator
 ---@return MidiNotes cache      The cache table of notes from MIDI at given path.
 function O.saveCacheMidi(pathMidi, resetThis)
     if(resetThis == 1) then
-        O.cacheMidi[pathMidi] = nil
+        L.cacheMidiNotes[pathMidi] = nil
     end
 
-    if(not (O.cacheMidi[pathMidi])) then
+    if(not (L.cacheMidiNotes[pathMidi])) then
         O.bufferLayerPath[obj.layer] = pathMidi
-        O.cacheMidi[pathMidi] = L.midiToRhythm(pathMidi)
+        L.cacheMidiNotes[pathMidi] = L.midiToRhythm(pathMidi)
         debug_print("Scanned MIDI at: "..pathMidi)
     end
 
-    return O.cacheMidi[pathMidi]
+    return L.cacheMidiNotes[pathMidi]
 end
 
 ---Updates or creates PlayState at the given path. Executed every frame of M2O objects.
 ---@param currentTime timeBeat  time in beats
----@param listNotes MidiNotes   list of notes, decoded
 ---@param pathMidi? string      The path of midis
 ---@return PlayState instance   The updated PlayState table
-function O.saveLatestNote(currentTime, listNotes, pathMidi)
+function O.saveLatestNote(currentTime, pathMidi)
 
     if((not pathMidi) or pathMidi == "") then
         pathMidi = O.bufferLayerPath[obj.layer]
@@ -46,10 +45,10 @@ function O.saveLatestNote(currentTime, listNotes, pathMidi)
     end
 
     if(not (O.bufferPlayState[pathMidi])) then
-        O.bufferPlayState[pathMidi] = M.PlayState.new(listNotes)
+        O.bufferPlayState[pathMidi] = M.PlayState.new(L.cacheMidiNotes[pathMidi])
     end
-    local lastIndexRead = O.bufferPlayState[pathMidi].noteIndex
-    return M.playLatestNote(currentTime, listNotes, lastIndexRead, O.bufferPlayState[pathMidi])
+    O.bufferPlayState[pathMidi]:update(currentTime)
+    return O.bufferPlayState[pathMidi]
 end
 
 ---Returns the PlayState out given path
@@ -62,7 +61,7 @@ function O.loadBufferLatestNote(pathMidi)
     local N = O.bufferPlayState[pathMidi]
     if(not N) then
         obj.load("text", "selected MIDI is not loaded!\n選択したMIDIが読み込まれていません！")
-        N = M.PlayState.new(O.cacheMidi[pathMidi])
+        N = M.PlayState.new(L.cacheMidiNotes[pathMidi])
     end
     return N
 end

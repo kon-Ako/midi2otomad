@@ -61,9 +61,9 @@ elseif(info == 1) then
     "Measure#: "..M.furMes.."\n"..
     "BPM:= "..M.bpm.." ; Metre:= "..M.metre.."/4".."\n"
 elseif(info == 2) then
-    str = L.writeTableContents(O.cacheMidi, true, "読み込み済み, Loaded MIDI: ", "\n", " exists as ", ".", "\nEND")
+    str = L.writeTableContents(L.cacheMidiNotes, true, "読み込み済み, Loaded MIDI: ", "\n", " exists as ", ".", "\nEND")
 elseif(info == 3) then
-    arr = O.cacheMidi[pathMidi]
+    arr = L.cacheMidiNotes[pathMidi]
     if(not arr) then
         str = "selected MIDI is not loaded!\n選択したMIDIが読み込まれていません！"
     else
@@ -98,7 +98,7 @@ else
     end
 
     local midiNotes = O.saveCacheMidi(pathMidi, resetThis)
-    local playData = O.saveLatestNote(M.curBeat, midiNotes, pathMidi)
+    local playData = O.saveLatestNote(M.curBeat, pathMidi)
 
     if(showNoteEvent == 1 ) then
         local C = midiNotes
@@ -138,7 +138,7 @@ end
 
 
 local midiNotes = O.saveCacheMidi(pathMidi, resetThis)
-local playData = O.saveLatestNote(M.curBeat, midiNotes, pathMidi)
+local playData = O.saveLatestNote(M.curBeat, pathMidi)
 
 if(isDebug) then
     obj.load("text", playData:tostring())
@@ -166,7 +166,7 @@ end
 
 
 local midiNotes = O.saveCacheMidi(pathMidi, resetThis)
-local playData = O.saveLatestNote(M.curBeat, midiNotes, pathMidi)
+local playData = O.saveLatestNote(M.curBeat, pathMidi)
 
 local vidLength = 0
 if(isDebug) then
@@ -196,7 +196,7 @@ end
 
 
 local midiNotes = O.saveCacheMidi(pathMidi,resetThis)
-local playData = O.saveLatestNote(M.curBeat, midiNotes, pathMidi)
+local playData = O.saveLatestNote(M.curBeat, pathMidi)
 
 if ( not O.bufferSeqImage[pathObj]) then
     O.bufferSeqImage[pathObj] = M.SequencedImage:new(pathObj)

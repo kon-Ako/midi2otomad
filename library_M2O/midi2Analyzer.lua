@@ -99,6 +99,13 @@ function L.MidiNotes.new(filePath, instance)
     return instance
 end
 
+---Get an object of MidiNotes at the given path.
+---@param filePath string       file path used as index.
+---@return MidiNotes listNotes  MidiNotes.
+function L.MidiNotes.get(filePath)
+    return L.cacheMidiNotes[filePath]
+end
+
 ---Write the contents of table as a string
 ---@param table table           table to read and explain as string
 ---@param isShowTypes? boolean  whether to show the type of value instead of the value itself
@@ -300,6 +307,7 @@ end
 L.MidiNotes.new("buffer")
 L.bufferActiveNotes = {}    --temporary list used by L.midiNoteDecode for notes that are started (eventType == 9) yet not ended (eventType == 8)
 
+---Get RawNoteEvents, decode, and return as MidiNotes. Will also save it to cacheMidiNotes.
 ---@param dict RawNoteEvents    MIDI deconstructed into table.  テーブルとして解体したMIDI
 ---@param instance? MidiNotes   A buffer table to update
 ---@param pathMidi string       file path to the original MIDI file
@@ -360,7 +368,6 @@ function L.midiToRhythm(pathMidi, instance)
     local string = L.midiOpenAsString(pathMidi)
     local dict = L.midiDecode(string)
     local rym = L.midiNoteDecode(dict, instance, pathMidi)
-    rym.filePath = pathMidi
     return rym
 end
 

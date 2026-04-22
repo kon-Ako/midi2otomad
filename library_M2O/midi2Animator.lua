@@ -2,6 +2,9 @@ debug_print("Loading midi2Animator.lua")
 
 local M = {}
 
+--Is this layering appropriate...?
+M.MidiToAnalyzer = require("library_M2O/midi2Analyzer")
+
 --Default values
 
 M.scriptPath = "C:\\ProgramData\\aviutl2\\Script\\midi2otomad"
@@ -17,9 +20,6 @@ M.curBeat   = 0
 M.curMes    = 0
 M.furBeat   = 0
 M.furMes    = 0
-
---Is this layering appropriate...?
-M.MidiToAnalyzer = require("library_M2O/midi2Analyzer")
 
 ---@alias timeBeat number   time in unit of beats
 ---@alias timeSecond number time in unit of seconds. For exmle, obj.time
@@ -39,7 +39,7 @@ M.MidiToAnalyzer = require("library_M2O/midi2Analyzer")
 ---@field progressEased number  progress processed through latest easing function
 M.PlayState = {
     source = M.MidiToAnalyzer.MidiNotes,
-    filePath = "",
+    filePath = M.scriptPath.."library_M2O\\test.MID",
     currentFrame = 0,
     noteIndex = 1,
     sustain = 0,
@@ -245,84 +245,6 @@ end
 ---@return number sign  sign of the number
 function M.sign(num)
     return (num>0) and 1 or ((num<0) and -1 or 0)
-end
-
----Find the last note pressed
----@param currentTime timeBeat      time in beats
----@param ListNotes MidiNotes       table of note events, decoded
----@param lastIndexRead? integer    index to start calculation from
----@return integer pos              the latest note
----@deprecated
-function M.findLatestNote(currentTime, ListNotes, lastIndexRead)
-    lastIndexRead = lastIndexRead or 1
-
-    local val1 = ListNotes.time[lastIndexRead] or 0
-    local val2 = ListNotes.time[lastIndexRead+1] or ListNotes.time[lastIndexRead]*2
-    local val3 = ListNotes.time[lastIndexRead+2] or ListNotes.time[lastIndexRead]*2
-    --Immediately check the likeliest index
-    if((val1 <= currentTime) and (currentTime < val2)) then
-        --Immediately check if the current index is a candidate
-        return lastIndexRead
-    elseif((val2 <= currentTime) and (currentTime < val3)) then
-        --Then check if the next index is candidate
-        return lastIndexRead+1
-    elseif(currentTime < ListNotes.time[1]) then
-        --return 0 if even 1st note isn't played.
-        return 0
-    elseif(val1 > currentTime) then
-        --set lastIndexRead to 1 if time is reveresed back.
-        lastIndexRead = 1
-    end
-
-    local iMin, iSup, pos= lastIndexRead, #ListNotes.time, 0
-    while (iMin <= iSup) do
-        pos = math.floor((iMin + iSup)/2)
-        val1, val2 = ListNotes.time[pos], (ListNotes.time[pos+1] or ListNotes.time[pos]*2)
-        if((val1 <= currentTime) and (currentTime < val2)) then
-            return pos
-        elseif (val1 < currentTime) then
-            iMin = pos + 1
-        else
-            iSup = pos - 1
-        end
-    end
-
-    return pos
-end
-
-M.bufferNote = M.PlayState.new()
----Updates the PlayState's value to that of given index. Returns the play data of the given note.
----@param currentTime timeBeat  time in beats
----@param listNotes MidiNotes   list of notes, decoded
----@param noteIndex integer     noteIndex to play
----@param instance? PlayState   the buffer table to store value; default to the M.bufferNote
----@return PlayState instance   the updated PlayState table
----@deprecated
-function M.playNote(currentTime, listNotes, noteIndex, instance)
-    instance = instance or M.bufferNote
-    instance.currentFrame = M.curFrame
-    instance.sustain = currentTime - (listNotes.time[noteIndex] or currentTime-1) --If note doesn't exist, defaults to 1
-    instance.sustNorm = instance.sustain/(listNotes.length[noteIndex] or 1)
-    instance.wasPressed = (instance.sustNorm >= 0)
-    instance.wasReleased = (instance.sustNorm >= 1)
-    instance.isPressed = (not instance.wasReleased) and instance.wasPressed
-    return instance
-end
-
----Updates the PlayState's value to that of latest noteIndex. Returns the play data of the given note.
----@param currentTime timeBeat      time in beats
----@param ListNotes MidiNotes       list of notes, decoded
----@param lastIndexRead? integer    noteIndex to start calculation from
----@param instance? PlayState       the buffer table to store value; default to the M.bufferNote
----@return PlayState instance       the updated PlayState table
----@deprecated
-function M.playLatestNote(currentTime, ListNotes, lastIndexRead, instance)
-    instance = instance or M.bufferNote
-    if(instance.currentFrame ~= M.curFrame or instance == M.bufferNote) then
-        instance.noteIndex = M.findLatestNote(currentTime, ListNotes, lastIndexRead)
-        M.playNote(currentTime, ListNotes, instance.noteIndex, instance)
-    end
-    return instance
 end
 
 return M
