@@ -2,7 +2,6 @@ debug_print("Loading midi2Otomad.lua")
 
 local O = {}
 
-O.cacheMidi         = {} --Save MidiNotes with file path as index.
 O.bufferSeqImage    = {} --Save information about sequenced images.
 O.bufferPlayState   = {} --Saves PlayState wtih file path as index. Is updated ev ery frame as animation changes.
 O.bufferLayerPath   = {} --Saves the path of MIDI loaded by M object on layer at index

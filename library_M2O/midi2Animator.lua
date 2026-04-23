@@ -26,7 +26,6 @@ M.furMes    = 0
 
 ---@class PlayState             table of the values of note currenlty played.
 ---@field source MidiNotes      pointer back to the original MidiNotes the PlayState will read from
----@field filePath string       file path to the original MIDI file
 ---@field noteIndex integer     noteIndex of the note the data was taken from.
 ---@field sustain timeBeat      the time since the note started was pressed. negative if it is upcoming note.
 ---@field sustNorm number       the sustain, divided by the length of the note
@@ -39,7 +38,6 @@ M.furMes    = 0
 ---@field progressEased number  progress processed through latest easing function
 M.PlayState = {
     source = M.MidiToAnalyzer.MidiNotes,
-    filePath = M.scriptPath.."library_M2O\\test.MID",
     currentFrame = 0,
     noteIndex = 1,
     sustain = 0,
@@ -75,7 +73,8 @@ end
 ---Returns the inside of PlayState
 ---@return string s     All value with explanation
 function M.PlayState:tostring()
-    return "At frame: "..self.currentFrame.." / "..M.totFrame..
+    return "Reading from: "..self.source.filePath..
+    "\nAt frame: "..self.currentFrame.." / "..M.totFrame..
     "\nPlaying note #: "..self.noteIndex..
     "\nSustain: "..(math.floor(self.sustain*100)/100)..
     "\nNormalized: "..(math.floor(self.sustNorm*100)/100)..

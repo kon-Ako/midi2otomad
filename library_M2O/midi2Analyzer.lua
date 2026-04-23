@@ -106,6 +106,57 @@ function L.MidiNotes.get(filePath)
     return L.cacheMidiNotes[filePath]
 end
 
+---Get the latest note played at given beat.
+---@param currentBeat timeBeat      time in beats
+---@param lastIndexRead? integer    index to check first
+---@return integer lastIndexRead    the index of latest note
+function L.MidiNotes:getLatestNoteIndex(currentBeat, lastIndexRead)
+    lastIndexRead = lastIndexRead or 1
+
+    --Immediately check the likely indices
+
+    local val1 = self.time[lastIndexRead] or 0
+    local val2 = self.time[lastIndexRead+1] or val1*2+8
+    local val3 = self.time[lastIndexRead+2] or val2*2+8
+    if((val1 <= currentBeat) and (currentBeat < val2)) then
+        --Keep current index
+        return lastIndexRead
+    elseif((val2 <= currentBeat) and (currentBeat < val3)) then
+        --Move to the next index
+        return lastIndexRead + 1
+    elseif(currentBeat < self.time[1]) then
+        --Return 0 if current beat is before the first note
+        return 0
+    elseif(currentBeat < val1) then
+        --Set lastIndexRead back to 1 if played back.
+        lastIndexRead = 1
+    end
+
+    local iMin, iMax= lastIndexRead, #self.time-1
+    --Perform binary search
+    while(iMin <= iMax) do
+        lastIndexRead = math.floor((iMin + iMax)/2)
+        val1, val2 = self.time[lastIndexRead], self.time[lastIndexRead+1]
+        if((val1 <= currentBeat) and (currentBeat < val2)) then
+            return lastIndexRead
+        elseif( val1 < currentBeat) then
+            iMin = lastIndexRead + 1
+        else
+            iMax = lastIndexRead - 1
+        end
+    end
+
+    return lastIndexRead
+end
+
+function L.MidiNotes:tostring()
+    local str = "Reading from: "..self.filePath
+    for k,v in ipairs(self.time) do
+        str = str.."\nt:"..tostring(v)..", len:"..tostring(self.length[k])..", p:"..tostring(self.notename[k])..", v:"..tostring(self.velocity[k])..", overlap:"..tostring(self.countActives[k])..", in Tk:"..tostring(self.track[k]).."/Ch:"..tostring(self.channel[k])
+    end
+    return str.."\n Loops At: "..tostring(self.loopAt)
+end
+
 ---Write the contents of table as a string
 ---@param table table           table to read and explain as string
 ---@param isShowTypes? boolean  whether to show the type of value instead of the value itself
@@ -354,7 +405,7 @@ function L.midiNoteDecode(dict, instance, pathMidi)
 
     end
 
-    for k,v in ipairs(instance.trackEndTime) do
+    for _,v in ipairs(instance.trackEndTime) do
         instance.loopAt = math.max(instance.loopAt, v)
     end
 
@@ -363,56 +414,12 @@ end
 
 ---@param pathMidi bytesAsString    the file path for MIDI to load 読み込むMIDIのファイルパス
 ---@param instance? MidiNotes       the table to write the data in
----@return MidiNotes rym            data of rhythm that we could easily interpret  抽出したデータをわかりやすく作り直したもの。
+---@return MidiNotes midiNotes      data of rhythm that we could easily interpret  抽出したデータをわかりやすく作り直したもの。
 function L.midiToRhythm(pathMidi, instance)
     local string = L.midiOpenAsString(pathMidi)
     local dict = L.midiDecode(string)
-    local rym = L.midiNoteDecode(dict, instance, pathMidi)
-    return rym
+    local midiNotes = L.midiNoteDecode(dict, instance, pathMidi)
+    return midiNotes
 end
-
----Get the latest note played at given beat.
----@param currentBeat timeBeat      time in beats
----@param lastIndexRead? integer    index to check first
----@return integer lastIndexRead    the index of latest note
-function L.MidiNotes:getLatestNoteIndex(currentBeat, lastIndexRead)
-    lastIndexRead = lastIndexRead or 1
-
-    --Immediately check the likely indices
-
-    local val1 = self.time[lastIndexRead] or 0
-    local val2 = self.time[lastIndexRead+1] or val1*2+8
-    local val3 = self.time[lastIndexRead+2] or val2*2+8
-    if((val1 <= currentBeat) and (currentBeat < val2)) then
-        --Keep current index
-        return lastIndexRead
-    elseif((val2 <= currentBeat) and (currentBeat < val3)) then
-        --Move to the next index
-        return lastIndexRead + 1
-    elseif(currentBeat < self.time[1]) then
-        --Return 0 if current beat is before the first note
-        return 0
-    elseif(currentBeat < val1) then
-        --Set lastIndexRead back to 1 if played back.
-        lastIndexRead = 1
-    end
-
-    local iMin, iMax= lastIndexRead, #self.time-1
-    --Perform binary search
-    while(iMin <= iMax) do
-        lastIndexRead = math.floor((iMin + iMax)/2)
-        val1, val2 = self.time[lastIndexRead], self.time[lastIndexRead+1]
-        if((val1 <= currentBeat) and (currentBeat < val2)) then
-            return lastIndexRead
-        elseif( val1 < currentBeat) then
-            iMin = lastIndexRead + 1
-        else
-            iMax = lastIndexRead - 1
-        end
-    end
-
-    return lastIndexRead
-end
-
 
 return L
