@@ -44,9 +44,9 @@ function O.saveLatestNote(currentTime, pathMidi)
     end
 
     if(not (O.bufferPlayState[pathMidi])) then
-        O.bufferPlayState[pathMidi] = M.PlayState.new(L.cacheMidiNotes[pathMidi])
+        O.bufferPlayState[pathMidi] = M.MultiPlayState.new(L.cacheMidiNotes[pathMidi])
     end
-    O.bufferPlayState[pathMidi]:update(currentTime)
+    O.bufferPlayState[pathMidi]:update()
     return O.bufferPlayState[pathMidi]
 end
 

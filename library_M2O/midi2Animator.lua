@@ -16,6 +16,7 @@ M.metre = 4
 
 M.curFrame  = 0
 M.totFrame  = 60
+M.framerate = 60
 M.curBeat   = 0
 M.curMes    = 0
 M.furBeat   = 0
@@ -99,6 +100,109 @@ function M.PlayState:update(currentBeat, noteIndex, force)
         self.wasReleased = (self.pressNorm >= 1)
         self.isPressed = (not self.wasReleased) and self.wasPressed
     end
+end
+
+---@class MultiPlayState: PlayState PlayState that holds precalculated values for all notes at all frame.
+---@field totalNotes integer        total amount of notes in source.
+---@field totalFrame integer        total amount of frame to calculate: will extend with parent object.
+---@field FIELD2DARR table          All the keys of flat 2D arrays below.\
+---@field latestAtFrame table       maps frame+1 (index) to the latestFrame at note
+---@field multiPressTime table      flat 2D array of pressTime of each note at each frame
+---@field multiPressNorm table      flat 2D array of pressNorm of each note at each frame
+---@field multiWasPressed table     flat 2D array of wasPressed of each note at each frame
+---@field multiWasReleased table    flat 2D array of wasReleased of each note at each frame
+---@field multiIsPressed table      flat 2D array of isPressed of each note at each frame
+M.MultiPlayState = {
+    totalNotes = 8,
+    totalFrame = M.totFrame,
+    latestAtFrame = {},
+    FIELD2DARR = {"multiPressTime", "multiPressNorm", "multiWasPressed", "multiWasReleased", "multiIsPressed"},
+    multiPressTime = {},
+    multiPressNorm = {},
+    multiWasPressed = {},
+    multiWasReleased = {},
+    multiIsPressed = {}
+}
+M.MultiPlayState.__index = M.MultiPlayState
+setmetatable(M.MultiPlayState, M.PlayState)
+
+---Returns the arpproperiate value
+---@param field string          the field to take from
+---@param note integer          the note to take from
+---@param frame integer         the frame to take from
+---@return number|boolean val   the value at given field, note, and frame
+function M.MultiPlayState:getNote(field, note, frame)
+    return self[field][frame*self.totalNotes + note]
+end
+
+function M.MultiPlayState:extend()
+    local init = #self.multiPressTime+1
+    local tN, tF = self.totalNotes, self.totalFrame
+    local tbl = nil
+    if(tF < M.totFrame) then
+        for frame = tF+1, M.totFrame do
+            self.latestAtFrame[frame] = self.source:getLatestNoteIndex(M.toBeat((frame-1)/M.framerate), self.latestAtFrame[frame-1])
+        end
+
+        --For each field of 2D array, extend each field to appropriate length.
+        for _,v in ipairs(self.FIELD2DARR) do
+            tbl = self[v]
+            for i=init, M.totFrame*tN do
+                tbl[i] = 0
+            end
+        end
+
+        for note = 1, tN do
+            for frame = tF+1, M.totFrame do
+                self.multiPressTime[frame*tN + note] = M.toBeat(frame/M.framerate) - (self.source.time[note] or -1)
+                self.multiPressNorm[frame*tN + note] = self.multiPressTime[frame*tN + note] / (self.source.length[note] or 1)
+                self.multiWasPressed[frame*tN + note] = self.multiPressNorm[frame*tN + note] >= 0
+                self.multiWasReleased[frame*tN + note] = self.multiPressNorm[frame*tN + note] >= 1
+                self.multiIsPressed[frame*tN + note] = self.multiWasPressed[frame*tN + note] and (not self.multiWasReleased[frame*tN + note])
+            end
+        end
+
+        self.totalFrame = M.totFrame
+    end
+
+end
+
+---Create new MultiPlayState
+---@param source MidiNotes          The source MidiNotes object the PlayState will update from.
+---@param instance? table           If given, turns that table into MultiPlayState instead of making new object
+---@return MultiPlayState instance  MultiPlayState
+function M.MultiPlayState.new(source, instance)
+    instance = instance or {}
+    setmetatable(instance, M.MultiPlayState)
+    instance.source = source
+    instance.totalNotes = #instance.source.time
+    instance.totalFrame = 0
+    instance.latestAtFrame = {}
+    instance.multiPressTime = {}
+    instance.multiPressNorm = {}
+    instance.multiWasPressed = {}
+    instance.multiWasReleased = {}
+    instance.multiIsPressed = {}
+    instance:extend()
+    return instance
+end
+
+---Update the MultiPlayState
+---@param noteIndex? number
+---@param force? boolean
+function M.MultiPlayState:update(noteIndex, force)
+    noteIndex = noteIndex or self.latestAtFrame[M.curFrame+1]
+    self:extend()
+    if(self.currentFrame ~= M.curFrame or force) then
+        self.noteIndex = noteIndex
+        self.currentFrame = M.curFrame
+        self.pressTime = self:getNote("multiPressTime", noteIndex, M.curFrame)
+        self.pressNorm = self:getNote("multiPressNorm", noteIndex, M.curFrame)
+        self.wasPressed = self:getNote("multiWasPressed", noteIndex, M.curFrame)
+        self.wasReleased = self:getNote("multiWasReleased", noteIndex, M.curFrame)
+        self.isPressed = self:getNote("multiIsPressed", noteIndex, M.curFrame)
+    end
+        
 end
 
 ---@class SequencedImage        Used to store some properties of filepath

@@ -31,7 +31,8 @@ M.metre     = metre
 
 M.curFrame  = obj.frame
 M.totFrame  = obj.totalframe
-M.curBeat   = M.toBeat(obj.time+framePlus/obj.framerate)+ M.mesPlus*M.metre
+M.framerate = obj.framerate
+M.curBeat   = M.toBeat(obj.time+framePlus/M.framerate)+ M.mesPlus*M.metre
 M.curMes    = M.curBeat/M.metre
 M.furBeat   = math.floor(M.curBeat)
 M.furMes    = math.floor(M.curMes)
