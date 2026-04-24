@@ -24,15 +24,15 @@ M.furMes    = 0
 ---@alias timeBeat number   time in unit of beats
 ---@alias timeSecond number time in unit of seconds. For exmle, obj.time
 
----@class PlayState             table of the values of note currenlty played.
+---@class PlayState             table of the values of note currenlty played. Calculated every frame.
 ---@field source MidiNotes      pointer back to the original MidiNotes the PlayState will read from
----@field noteIndex integer     noteIndex of the note the data was taken from.
----@field sustain timeBeat      the time since the note started was pressed. negative if it is upcoming note.
----@field sustNorm number       the sustain, divided by the length of the note
+---@field noteIndex integer     noteIndex of the curretnly played note.
+---@field pressTime timeBeat    the time since the note was pressed. negative if it is upcoming note.
+---@field pressNorm number      the pressTime, divided by the length of the note
 ---@field wasPressed boolean    whether the note was ever active
 ---@field wasReleased boolean   whether the note has ended being pressed
 ---@field isPressed boolean     whether the note is currently active or not
----@field progress number       sustain divided by latest length track
+---@field progress number       pressTime divided by latest length track
 ---@field progressIndex integer noteIndex accounted by latest delayIndex
 ---@field progressSign integer  sign used to multiply progressEased
 ---@field progressEased number  progress processed through latest easing function
@@ -40,8 +40,8 @@ M.PlayState = {
     source = M.MidiToAnalyzer.MidiNotes,
     currentFrame = 0,
     noteIndex = 1,
-    sustain = 0,
-    sustNorm = 0,
+    pressTime = 0,
+    pressNorm = 0,
     wasPressed = false,
     wasReleased = false,
     isPressed = false,
@@ -54,7 +54,7 @@ M.PlayState.__index = M.PlayState
 
 ---Create new PlayState
 ---@param source MidiNotes      The source MidiNotes object the PlayState will update from.
----@param instance? table       If given, turns that table into MidiNotes instead of making new object
+---@param instance? table       If given, turns that table into PlayState instead of making new object
 ---@return PlayState instance   PlayState with default value
 function M.PlayState.new(source, instance)
     instance = instance or {}
@@ -62,8 +62,8 @@ function M.PlayState.new(source, instance)
     instance.source = source
     instance.currentFrame = 0
     instance.noteIndex = 1
-    instance.sustain = 0
-    instance.sustNorm = 0
+    instance.pressTime = 0
+    instance.pressNorm = 0
     instance.wasPressed = false
     instance.wasReleased = false
     instance.isPressed = false
@@ -76,8 +76,8 @@ function M.PlayState:tostring()
     return "Reading from: "..self.source.filePath..
     "\nAt frame: "..self.currentFrame.." / "..M.totFrame..
     "\nPlaying note #: "..self.noteIndex..
-    "\nSustain: "..(math.floor(self.sustain*100)/100)..
-    "\nNormalized: "..(math.floor(self.sustNorm*100)/100)..
+    "\nSustain: "..(math.floor(self.pressTime*100)/100)..
+    "\nNormalized: "..(math.floor(self.pressNorm*100)/100)..
     "\nNote is currently pressed: "..tostring(self.isPressed)..
     "\nNote was ever pressed: "..tostring(self.wasPressed)..
     "\nNote was ever released:"..tostring(self.wasReleased)
@@ -93,10 +93,10 @@ function M.PlayState:update(currentBeat, noteIndex, force)
     if(self.currentFrame ~= M.curFrame or force) then
         self.noteIndex = noteIndex
         self.currentFrame = M.curFrame
-        self.sustain = currentBeat - (self.source.time[noteIndex] or -1) --If note doesn't exist, starts at 1.
-        self.sustNorm = self.sustain / (self.source.length[noteIndex] or 1)
-        self.wasPressed = (self.sustNorm >= 0)
-        self.wasReleased = (self.sustNorm >= 1)
+        self.pressTime = currentBeat - (self.source.time[noteIndex] or -1) --If note doesn't exist, starts at 1.
+        self.pressNorm = self.pressTime / (self.source.length[noteIndex] or 1)
+        self.wasPressed = (self.pressNorm >= 0)
+        self.wasReleased = (self.pressNorm >= 1)
         self.isPressed = (not self.wasReleased) and self.wasPressed
     end
 end

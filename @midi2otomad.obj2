@@ -170,9 +170,9 @@ local playData = O.saveLatestNote(M.curBeat, pathMidi)
 
 local vidLength = 0
 if(isDebug) then
-    obj.load("text", playData:tostring())
+    obj.load("text", playData.source:tostring())
 else
-    vidLength = obj.load("movie",pathObj,math.max(startTime+playSpeed/100*M.unBeat(playData.sustain), 0))
+    vidLength = obj.load("movie",pathObj,math.max(startTime+playSpeed/100*M.unBeat(playData.pressTime), 0))
 end
 
 @M2O連番画像
@@ -203,7 +203,7 @@ if ( not O.bufferSeqImage[pathObj]) then
 end
 local S = O.bufferSeqImage[pathObj]
 -- Separate path into path, number, and format
-local frame = S.startFrame + math.max(0, math.floor(M.unBeat(playData.sustain)*playSpeed/100*obj.framerate))
+local frame = S.startFrame + math.max(0, math.floor(M.unBeat(playData.pressTime)*playSpeed/100*obj.framerate))
 
 loopStart = math.max(loopStart, S.startFrame)
 loopEnd = math.min(S.finalFrame, math.max(loopStart, loopEnd)) + 1

@@ -57,7 +57,7 @@ O.saveCacheMidi(pathMidi)
 O.saveLatestNote(M.curBeat, pathMidi)
 
 if(isDebug) then
-    local aa, ab, ac, ad = O.bufferPlayState[obj.layer].noteIndex, O.bufferPlayState[obj.layer].sustain, O.bufferPlayState[obj.layer].sustNorm, O.bufferPlayState[obj.layer].isPressed
+    local aa, ab, ac, ad = O.bufferPlayState[obj.layer].noteIndex, O.bufferPlayState[obj.layer].pressTime, O.bufferPlayState[obj.layer].pressNorm, O.bufferPlayState[obj.layer].isPressed
     ab = math.floor(ab*100)/100
     ac = math.floor(ac*100)/100
     local ae = ad and "T" or "F"

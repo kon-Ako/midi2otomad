@@ -65,9 +65,9 @@ function O.loadBufferLatestNote(pathMidi)
     return N
 end
 
----Reprocess the sustain of note based on information from track bar.
+---Reprocess the pressTime of note based on information from track bar.
 ---@param length number             length of animation, in beats
----@param isNorm boolean            if true, anim uses sustNorm instead of sustain
+---@param isNorm boolean            if true, anim uses pressNorm instead of pressTime
 ---@param delayIndex integer        noteIndex is calculated with this number added instead of actual number.
 ---@param easing integer            specifies which easing function is used
 ---@param magnitude number          magnitude of easing function
@@ -81,7 +81,7 @@ function O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, i
     N.progressIndex = N.noteIndex + delayIndex
     isDecaying = (isDecaying + isSwitching*N.progressIndex)%2
     N.progressSign = 1-2*(isAlternating*N.progressIndex%2)
-    N.progress = ((length == 0) and 1) or (isNorm and N.sustNorm or N.sustain)/length --if length is 0, finish immediately; else, N.progress is squished by length
+    N.progress = ((length == 0) and 1) or (isNorm and N.pressNorm or N.pressTime)/length --if length is 0, finish immediately; else, N.progress is squished by length
     N.progressEased = (isDecaying+(1-2*isDecaying)*(M.ease.force(N.progress, magnitude, easing)))*N.progressSign
     return N
 end
