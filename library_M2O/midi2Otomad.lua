@@ -31,7 +31,7 @@ function O.saveCacheMidi(pathMidi, resetThis)
     return L.cacheMidiNotes[pathMidi]
 end
 
----Updates or creates PlayState at the given path. Executed every frame of M2O objects.
+---Updates or creates PlayState at the given path. Executed every frame for each M2O objects.
 ---@param currentTime timeBeat  time in beats
 ---@param pathMidi? string      The path of midis
 ---@return PlayState instance   The updated PlayState table
@@ -60,7 +60,7 @@ function O.loadBufferLatestNote(pathMidi)
     local N = O.bufferPlayState[pathMidi]
     if(not N) then
         obj.load("text", "selected MIDI is not loaded!\n選択したMIDIが読み込まれていません！")
-        N = M.PlayState.new(L.cacheMidiNotes[pathMidi])
+        N = M.MultiPlayState.new(L.cacheMidiNotes[pathMidi])
     end
     return N
 end

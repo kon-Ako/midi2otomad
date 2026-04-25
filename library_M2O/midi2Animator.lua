@@ -135,6 +135,7 @@ function M.MultiPlayState:getNote(field, note, frame)
     return self[field][frame*self.totalNotes + note]
 end
 
+---Extends the tables of MultiPlayState up to the largest total frame.
 function M.MultiPlayState:extend()
     local init = #self.multiPressTime+1
     local tN, tF = self.totalNotes, self.totalFrame
@@ -188,8 +189,8 @@ function M.MultiPlayState.new(source, instance)
 end
 
 ---Update the MultiPlayState
----@param noteIndex? number
----@param force? boolean
+---@param noteIndex? number noteIndex to read; defaults to the latest note.
+---@param force? boolean    If true, will always update; else, only update when frame changed.
 function M.MultiPlayState:update(noteIndex, force)
     noteIndex = noteIndex or self.latestAtFrame[M.curFrame+1]
     self:extend()

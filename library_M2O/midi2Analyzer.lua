@@ -65,15 +65,15 @@ end
 ---@field loopAt integer        the largest value in trackEndTime
 L.MidiNotes = {
     filePath = "",
-    time = {},
-    length = {},
-    track = {},
-    channel = {},
-    note = {},
-    notename = {},
-    velocity = {},
-    countActives = {},
-    trackEndTime = {},
+    time = {-64},
+    length = {1},
+    track = {0},
+    channel = {0},
+    note = {60},
+    notename = {"C4"},
+    velocity = {127},
+    countActives = {1},
+    trackEndTime = {8},
     loopAt = 8
 }
 L.MidiNotes.__index = L.MidiNotes
@@ -87,14 +87,14 @@ function L.MidiNotes.new(filePath, instance)
     L.cacheMidiNotes[filePath] = instance
     setmetatable(instance, L.MidiNotes)
     instance.filePath = filePath
-    instance.time = {}
-    instance.length = {}
-    instance.track = {}
-    instance.channel = {}
-    instance.note = {}
-    instance.notename = {}
-    instance.velocity = {}
-    instance.countActives = {}
+    instance.time = {-64}
+    instance.length = {1}
+    instance.track = {0}
+    instance.channel = {0}
+    instance.note = {60}
+    instance.notename = {"C4"}
+    instance.velocity = {127}
+    instance.countActives = {1}
     instance.trackEndTime = {}
     return instance
 end
@@ -365,7 +365,7 @@ L.bufferActiveNotes = {}    --temporary list used by L.midiNoteDecode for notes 
 ---@return MidiNotes instance   table of lists of notes easily calculated by Animator   MIDIの音符の一覧。簡単に計算できる
 function L.midiNoteDecode(dict, instance, pathMidi)
     instance = instance or L.MidiNotes.new(pathMidi)
-    local ind, finishInd = 1, 1
+    local ind, finishInd = 2, 1
     local eventType, curTk, curCh, curNt, curVl, curAT, key, count = 9, 0, 0, 0, 0, 0, "", 0
 
     for k,v in ipairs(dict.status) do
