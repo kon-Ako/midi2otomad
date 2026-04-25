@@ -44,9 +44,9 @@ function O.saveLatestNote(currentTime, pathMidi)
     end
 
     if(not (O.bufferPlayState[pathMidi])) then
-        O.bufferPlayState[pathMidi] = M.MultiPlayState.new(L.cacheMidiNotes[pathMidi])
+        O.bufferPlayState[pathMidi] = M.PlayState.new(L.cacheMidiNotes[pathMidi])
     end
-    O.bufferPlayState[pathMidi]:update()
+    O.bufferPlayState[pathMidi]:update(currentTime)
     return O.bufferPlayState[pathMidi]
 end
 
@@ -60,7 +60,7 @@ function O.loadBufferLatestNote(pathMidi)
     local N = O.bufferPlayState[pathMidi]
     if(not N) then
         obj.load("text", "selected MIDI is not loaded!\n選択したMIDIが読み込まれていません！")
-        N = M.MultiPlayState.new(L.cacheMidiNotes[pathMidi])
+        N = M.PlayState.new(L.cacheMidiNotes[pathMidi])
     end
     return N
 end
