@@ -192,28 +192,18 @@ end
 
 local playData = M.PlayState.getInstance(pathMidi, true, resetThis)
 
-if ( not O.bufferSeqImage[pathObj]) then
-    O.bufferSeqImage[pathObj] = M.SequencedImage.new(pathObj)
-end
-local S = O.bufferSeqImage[pathObj]
--- Separate path into path, number, and format
-local frame = S.startFrame + math.max(0, math.floor(M.unBeat(playData.pressTime)*playSpeed/100*obj.framerate))
-
-loopStart = math.max(loopStart, S.startFrame)
-loopEnd = math.min(S.finalFrame, math.max(loopStart, loopEnd)) + 1
-local loadFrame = math.min(frame, (frame-loopStart)%(loopEnd-loopStart)+loopStart)
-
-local pathComplete = S:getCompletePath(loadFrame)
+local seqImg = M.SequencedImage.getInstance(pathObj, loopStart, loopEnd, resetThis)
+local pathComplete, loadFrame = seqImg:update(playData.pressTime+.001, playSpeed)
 
 obj.load("image", pathComplete)
 
 if(isDebug) then
     local w,h = obj.w, obj.h
-    local totFrameSqrt = math.floor(math.sqrt(S.finalFrame - S.startFrame))
+    local totFrameSqrt = math.floor(math.sqrt(seqImg.finalFrame - seqImg.startFrame))
 
-    for i = 0, S.finalFrame-S.startFrame do
-        obj.load("image", S:getCompletePath(i+S.startFrame))
-        if( i+S.startFrame == loadFrame) then
+    for i = 0, seqImg.finalFrame-seqImg.startFrame do
+        obj.load("image", seqImg:getCompletePath(i+seqImg.startFrame))
+        if( i+seqImg.startFrame == loadFrame) then
             obj.effect("枠線", "サイズ", 10*totFrameSqrt, "枠色", 0xff0000)
         end
         obj.draw(w/totFrameSqrt*(i%totFrameSqrt - (totFrameSqrt-1)/2),h/totFrameSqrt*(math.floor(i/totFrameSqrt) - (totFrameSqrt-1)/2), 0, 1/totFrameSqrt)
