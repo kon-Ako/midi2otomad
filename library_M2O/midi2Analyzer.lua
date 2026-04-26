@@ -3,8 +3,10 @@ debug_print("Loading midi2Analyzer.lua")
 local bit = require("bit")
 local L = {}
 
+L.cacheMidiNotes = {} --Saves MidiNotes object with file path as index.
+
 ---Write the contents of table as a string
----@param table table           table to read and explain as string
+---@param givenTable table      table to read and explain as string
 ---@param isShowTypes? boolean  whether to show the type of value instead of the value itself
 ---@param strH? string          Starting statement
 ---@param str1? string          before index
@@ -13,39 +15,50 @@ local L = {}
 ---@param strT? string          Final statement
 ---@param isList? boolean       Use ipairs() instead of pairs() if true
 ---@return string str           String that shows all the contents of table
-function L.writeTableContents(table, isShowTypes, strH, str1, str2, str3, strT, isList)
+function L.writeTableContents(givenTable, isShowTypes, strH, str1, str2, str3, strT, isList)
     strH = strH or "Contents are: "
     str1 = str1 or "\n"
     str2 = str2 or " has "
     str3 = str3 or "."
     strT = strT or "\n----"
 
+    local i, tbl = 2, {strH}
     local prs = isList and ipairs or pairs
 
     if(isShowTypes) then
-        for k,v in prs(table) do
-            strH = strH..str1..k..str2..type(v)..str3
+        for k,v in prs(givenTable) do
+            tbl[i]   = str1
+            tbl[i+1] = tostring(k)
+            tbl[i+2] = str2
+            tbl[i+3] = type(v)
+            tbl[i+4] = str3
+            i = i+5
         end
     else
-        for k,v in prs(table) do
-            strH = strH..str1..k..str2..v..str3
+        for k,v in prs(givenTable) do
+            tbl[i]   = str1
+            tbl[i+1] = tostring(k)
+            tbl[i+2] = str2
+            tbl[i+3] = v
+            tbl[i+4] = str3
+            i = i+5
         end
     end
 
-    strH = strH..strT
-    return strH
+    tbl[i] = strT
+    return table.concat(tbl)
 end
 
-L.noteNames = {"C-1", "C#-1", "D-1", "D#-1", "E-1", "F-1", "F#-1", "G-1", "G#-1", "A-1", "A#-1", "B-1", 
-"C0", "C#0", "D0", "D#0", "E0", "F0", "F#0", "G0", "G#0", "A0", "A#0", "B0", 
-"C1", "C#1", "D1", "D#1", "E1", "F1", "F#1", "G1", "G#1", "A1", "A#1", "B1", 
-"C2", "C#2", "D2", "D#2", "E2", "F2", "F#2", "G2", "G#2", "A2", "A#2", "B2", 
-"C3", "C#3", "D3", "D#3", "E3", "F3", "F#3", "G3", "G#3", "A3", "A#3", "B3", 
-"C4", "C#4", "D4", "D#4", "E4", "F4", "F#4", "G4", "G#4", "A4", "A#4", "B4", 
-"C5", "C#5", "D5", "D#5", "E5", "F5", "F#5", "G5", "G#5", "A5", "A#5", "B5", 
-"C6", "C#6", "D6", "D#6", "E6", "F6", "F#6", "G6", "G#6", "A6", "A#6", "B6", 
-"C7", "C#7", "D7", "D#7", "E7", "F7", "F#7", "G7", "G#7", "A7", "A#7", "B7", 
-"C8", "C#8", "D8", "D#8", "E8", "F8", "F#8", "G8", "G#8", "A8", "A#8", "B8", 
+L.noteNames = {"C-1", "C#-1", "D-1", "D#-1", "E-1", "F-1", "F#-1", "G-1", "G#-1", "A-1", "A#-1", "B-1",
+"C0", "C#0", "D0", "D#0", "E0", "F0", "F#0", "G0", "G#0", "A0", "A#0", "B0",
+"C1", "C#1", "D1", "D#1", "E1", "F1", "F#1", "G1", "G#1", "A1", "A#1", "B1",
+"C2", "C#2", "D2", "D#2", "E2", "F2", "F#2", "G2", "G#2", "A2", "A#2", "B2",
+"C3", "C#3", "D3", "D#3", "E3", "F3", "F#3", "G3", "G#3", "A3", "A#3", "B3",
+"C4", "C#4", "D4", "D#4", "E4", "F4", "F#4", "G4", "G#4", "A4", "A#4", "B4",
+"C5", "C#5", "D5", "D#5", "E5", "F5", "F#5", "G5", "G#5", "A5", "A#5", "B5",
+"C6", "C#6", "D6", "D#6", "E6", "F6", "F#6", "G6", "G#6", "A6", "A#6", "B6",
+"C7", "C#7", "D7", "D#7", "E7", "F7", "F#7", "G7", "G#7", "A7", "A#7", "B7",
+"C8", "C#8", "D8", "D#8", "E8", "F8", "F#8", "G8", "G#8", "A8", "A#8", "B8",
 "C9", "C#9", "D9", "D#9", "E9", "F9", "F#9", "G9"
 }
 ---Get note name using raw values from MIDI.
@@ -54,8 +67,6 @@ L.noteNames = {"C-1", "C#-1", "D-1", "D#-1", "E-1", "F-1", "F#-1", "G-1", "G#-1"
 function L.noteNames:getNoteName(note)
     return (self[note%128+1])
 end
-
-L.cacheMidiNotes = {}
 
 ---@alias bytesAsString string  The string read with io.open from MIDI file.
 
@@ -87,7 +98,7 @@ L.RawNoteEvents = {
 }
 L.RawNoteEvents.__index = L.RawNoteEvents
 
----Creates new RawNoteEvents.
+---Creates new blank RawNoteEvents instance.
 ---@param instance? table            If given, turns that table into RawNoteEvents instead of making new object
 ---@return RawNoteEvents instance    RawNoteEvents with default values
 function L.RawNoteEvents.new(instance)
@@ -140,11 +151,11 @@ function L.readVLQ(string, start)
     return num, start
 end
 
----@param pathMidi string           the path of MIDI to read.   MIDIのファイルパス
+---@param filePath string           the path of MIDI to read.   MIDIのファイルパス
 ---@return bytesAsString strMIDI    MIDI as string of binary.   迫真!バイナリのStringと化したMIDI先輩
-function L.midiOpenAsString(pathMidi)
+function L.midiOpenAsString(filePath)
     local str = ""
-    local file = assert(io.open(pathMidi, "rb"))
+    local file = assert(io.open(filePath, "rb"))
     if (not file) then
         str = "ERROR!"
         debug_print("MIDI load failed!")
@@ -276,7 +287,7 @@ L.MidiNotes = {
 }
 L.MidiNotes.__index = L.MidiNotes
 
----Creates new MidiNotes. Also stores it in L.cacheMidiNotes.
+---Creates new blank MidiNotes instance. Also stores it in L.cacheMidiNotes.
 ---@param filePath string       File Path
 ---@param instance? table       If given, initiates that table as MidiNotes instead of making new table.
 ---@return MidiNotes instance   MidiNotes with default value
@@ -300,13 +311,13 @@ end
 L.bufferActiveNotes = {}    --temporary list used by L.MidiNotes.fromRawNoteEvents for notes that are started (eventType == 9) yet not ended (eventType == 8)
 
 ---Get RawNoteEvents, decode, and return as MidiNotes
----@param pathMidi string       file path to the original MIDI file
+---@param filePath string       file path to the original MIDI file
 ---@param rawNE? RawNoteEvents  MIDI deconstructed into table. Creates one if not given.テーブルとして解体したMIDI
 ---@param instance? MidiNotes   A buffer table to update
 ---@return MidiNotes instance   table of lists of notes easily calculated by Animator   MIDIの音符の一覧。簡単に計算できる
-function L.MidiNotes.fromRawNoteEvents(pathMidi, rawNE, instance)
-    rawNE = rawNE or L.RawNoteEvents.fromString(L.midiOpenAsString(pathMidi))
-    instance = instance or L.MidiNotes.new(pathMidi)
+function L.MidiNotes.fromRawNoteEvents(filePath, rawNE, instance)
+    rawNE = rawNE or L.RawNoteEvents.fromString(L.midiOpenAsString(filePath))
+    instance = instance or L.MidiNotes.new(filePath)
     local ind, finishInd = 2, 1
     local eventType, curTk, curCh, curNt, curVl, curAT, key, count = 9, 0, 0, 0, 0, 0, "", 0
 
@@ -410,11 +421,28 @@ function L.MidiNotes:getLatestNoteIndex(currentBeat, lastIndexRead)
 end
 
 function L.MidiNotes:tostring()
-    local str = "Reading from: "..self.filePath
+    local i, tbl = 3, {"Reading from: ", self.filePath}
     for k,v in ipairs(self.time) do
-        str = str.."\nt:"..tostring(v)..", len:"..tostring(self.length[k])..", p:"..tostring(self.notename[k])..", v:"..tostring(self.velocity[k])..", overlap:"..tostring(self.countActives[k])..", in Tk:"..tostring(self.track[k]).."/Ch:"..tostring(self.channel[k])
+        tbl[i]    = "\nt:"
+        tbl[i+1]  = v
+        tbl[i+2]  = ", len:"
+        tbl[i+3]  = self.length[k]
+        tbl[i+4]  = ", p:"
+        tbl[i+5]  = self.notename[k]
+        tbl[i+6]  = ", v:"
+        tbl[i+7]  = self.velocity[k]
+        tbl[i+8]  = ", overlap:"
+        tbl[i+9]  = self.countActives[k]
+        tbl[i+10] = ", in Tk:"
+        tbl[i+11] = self.track[k]
+        tbl[i+12] = "/Ch:"
+        tbl[i+13] = self.channel[k]
+        i = i+14
     end
-    return str.."\n Loops At: "..tostring(self.loopAt)
+    tbl[i]    = "\n Loops At: "
+    tbl[i+1]  = tostring(self.loopAt)
+    tbl[i+2]  = "."
+    return table.concat(tbl)
 end
 L.MidiNotes.__tostring = L.MidiNotes.tostring
 

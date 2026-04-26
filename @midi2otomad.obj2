@@ -193,7 +193,7 @@ end
 local playData = M.PlayState.getInstance(pathMidi, true, resetThis)
 
 if ( not O.bufferSeqImage[pathObj]) then
-    O.bufferSeqImage[pathObj] = M.SequencedImage:new(pathObj)
+    O.bufferSeqImage[pathObj] = M.SequencedImage.new(pathObj)
 end
 local S = O.bufferSeqImage[pathObj]
 -- Separate path into path, number, and format

@@ -6,8 +6,9 @@ local M = {}
 M.MidiToAnalyzer = require("library_M2O/midi2Analyzer")
 local L = M.MidiToAnalyzer
 
-M.bufferPlayState = {}
-M.bufferLayerPath = {}
+M.bufferPlayState = {} --Saves PlayState with file path as index. Is updated ev ery frame as animation changes.
+M.bufferLayerPath = {} --Maps layer of object to file path of last MIDI loaded.
+M.bufferSeqImage  = {} --Saves information about sequenced images.
 
 --Default values
 
@@ -57,7 +58,7 @@ M.PlayState = {
 }
 M.PlayState.__index = M.PlayState
 
----Create new PlayState. Also stores it in M.bufferPlayState.
+---Creates new blank PlayState instance. Also stores it in M.bufferPlayState.
 ---@param source MidiNotes      the source MidiNotes object the PlayState will update from.
 ---@param instance? table       if given, turns that table into PlayState instead of making new object
 ---@return PlayState instance   PlayState with default value
@@ -76,7 +77,7 @@ function M.PlayState.new(source, instance)
     return instance
 end
 
----Get an object of PlayState at given path. Creates one if they don't exist.
+---Gets an instance of PlayState at given path. Creates one if they don't exist.
 ---@param filePath? string                      file path used as index. If empty, uses last used filePath in that layer.
 ---@param doUpdate? boolean                     Update the instance before returning it.
 ---@param forceReset? boolean                   if true, deletes the PlayState object to recreate it.
@@ -87,29 +88,32 @@ function M.PlayState.getInstance(filePath, doUpdate, forceReset)
         filePath = M.bufferLayerPath[obj.layer]
     end
 
-    if(forceReset or not M.bufferPlayState[filePath]) then
+    local playState = M.bufferPlayState[filePath]
+
+    if(forceReset or not playState) then
         M.bufferPlayState[filePath] = nil
-        M.PlayState.new(L.MidiNotes.getInstance(filePath, forceReset))
+        playState = M.PlayState.new(L.MidiNotes.getInstance(filePath, forceReset))\
+        playState:update()
     end
 
     if(doUpdate) then
-        M.bufferPlayState[filePath]:update()
+        playState:update()
     end
 
-    return M.bufferPlayState[filePath]
+    return playState
 end
 
 ---Returns the inside of PlayState
 ---@return string s     All value with explanation
 function M.PlayState:tostring()
-    return "Reading from: "..self.source.filePath..
-    "\nAt frame: "..self.currentFrame.." / "..M.totFrame..
-    "\nPlaying note #: "..self.noteIndex..
-    "\nSustain: "..(math.floor(self.pressTime*100)/100)..
-    "\nNormalized: "..(math.floor(self.pressNorm*100)/100)..
-    "\nNote is currently pressed: "..tostring(self.isPressed)..
-    "\nNote was ever pressed: "..tostring(self.wasPressed)..
-    "\nNote was ever released:"..tostring(self.wasReleased)
+    return table.concat({"Reading from: ", self.source.filePath,
+    "\nAt frame: ", self.currentFrame, " / ", M.totFrame,
+    "\nPlaying note #: ", self.noteIndex,
+    "\nSustain: ", (math.floor(self.pressTime*100)/100),
+    "\nNormalized: ", (math.floor(self.pressNorm*100)/100),
+    "\nNote is currently pressed: ", tostring(self.isPressed),
+    "\nNote was ever pressed: ", tostring(self.wasPressed),
+    "\nNote was ever released:", tostring(self.wasReleased)})
 end
 M.PlayState.__tostring = M.PlayState.tostring
 
@@ -274,22 +278,24 @@ M.SequencedImage = {
 }
 M.SequencedImage.__index = M.SequencedImage
 
----Create new SequencedImage
----@param pathObj string            Path of the Sequenced Image
+---Creates new blank SequencedImage instance. Also stores it in bufferPlayState.
+---@param filePath string           file path used as index and read from.
 ---@param instance? table           If given, turns that table into RawNoteEvents instead of making new object
 ---@return SequencedImage instance  Used to store some properties of filepath
-function M.SequencedImage:new(pathObj, instance)
+function M.SequencedImage.new(filePath, instance)
     instance = instance or {}
-    setmetatable(instance, self)
+    M.bufferSeqImage[filePath] = instance
+    setmetatable(instance, M.SequencedImage)
+    --[[
     local extensionIndx, strStartFrame = nil, ""
-    extensionIndx, _, strStartFrame, instance.fileExtension = pathObj:find("(%d+)(%.[^%.]+)$")
+    extensionIndx, _, strStartFrame, instance.fileExtension = filePath:find("(%d+)(%.[^%.]+)$")
     if(not extensionIndx) then
         obj.load("text", "Invalid Sequenced Image!\n読み込んだファイルは連番画像ではありません！")
         obj.draw()
         return instance
     end
     instance.extensionIndx = extensionIndx
-    instance.pathGeneral = pathObj:sub(1,extensionIndx-1)
+    instance.pathGeneral = filePath:sub(1,extensionIndx-1)
     instance.startFrame = tonumber(strStartFrame)
 
     instance.is0Filled = (strStartFrame == tostring(instance.startFrame))
@@ -299,10 +305,7 @@ function M.SequencedImage:new(pathObj, instance)
     end
 
     instance.finalFrame = instance:findFinalFrame()
-
-    debug_print(instance.pathGeneral)
-    debug_print(instance.finalFrame)
-
+]]
     return instance
 end
 
@@ -320,6 +323,36 @@ function M.SequencedImage:findFinalFrame()
     return self.finalFrame
 end
 
+---Gets an instance of SequencedImage at given path. Creates one if they don't exist.
+---@param filePath string           file path used as index and read from.
+---@param forceReset? boolean       if true, deletes the SequencedImage object to recreate it.
+---@return SequencedImage seqImage  appropraiate instance of object created.
+function M.SequencedImage.getInstance(filePath, forceReset)
+    local seqImage = M.bufferSeqImage[filePath]
+
+    if(forceReset or not seqImage) then
+        seqImage = M.bufferSeqImage.new(filePath)
+        local strStartFrame = ""
+        seqImage.extensionIndx, _, strStartFrame, seqImage.fileExtension = filePath:find("(%d+)(%.[^%.]+)$")
+        if(not seqImage.extensionIndx) then
+            obj.load("text", "Invalid Sequenced Image!\n読み込んだファイルは連番画像ではありません！")
+            obj.draw()
+            return seqImage
+        end
+        seqImage.pathGeneral = filePath:sub(1,seqImage.extensionIndx-1)
+        seqImage.startFrame = tonumber(strStartFrame)
+        seqImage.is0Filled =(strStartFrame == tostring(seqImage.startFrame))
+
+        if(seqImage.is0Filled) then
+            seqImage.totalDigits = strStartFrame:len()
+        end
+
+        seqImage.finalFrame = seqImage:findFinalFrame()
+    end
+
+    return seqImage
+end
+
 ---Depending on how the Sequenced Image is numbered, returns appropriate file path to load the given frame.
 ---@param frame integer         The number of the frame to load.
 ---@return string completePath  The complete filepath to load.
@@ -329,6 +362,11 @@ function M.SequencedImage:getCompletePath(frame)
         string = string..string.rep("0", self.totalDigits - 1 - math.floor(math.log(frame, 10) or 0))
     end
     return string..frame..self.fileExtension
+end
+
+function M.SequencedImage:findAppropriateFrame()
+    local num = 1
+    return num
 end
 
 --List of easing functions
