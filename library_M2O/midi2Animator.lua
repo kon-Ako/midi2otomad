@@ -81,11 +81,16 @@ end
 ---@param forceReset? boolean                   if true, deletes the PlayState object to recreate it.
 ---@return PlayState|MultiPlayState playState   appropriate object created
 function M.PlayState.getInstance(filePath, forceReset)
-    filePath = filePath or M.bufferLayerPath[obj.layer]
+
+    if(not filePath or filePath == "") then
+        filePath = M.bufferLayerPath[obj.layer]
+    end
+
     if(forceReset or not M.bufferPlayState[filePath]) then
         M.bufferPlayState[filePath] = nil
         M.PlayState.new(L.MidiNotes.getInstance(filePath, forceReset))
     end
+
     return M.bufferPlayState[filePath]
 end
 
@@ -135,7 +140,7 @@ end
 function M.PlayState:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
     self.progressIndex = self.noteIndex + delayIndex
     isDecaying = (isDecaying + isSwitching*self.progressIndex)%2
-    self.progressSign = 1-2*(isAlternating*N.progressIndex%2)
+    self.progressSign = 1-2*(isAlternating*self.progressIndex%2)
     self.progress = ((length == 0) and 1) or (isNorm and self.pressNorm or self.pressTime)/length
     self.progressEased = (isDecaying+(1-2*isDecaying)*(M.ease.force(self.progress, magnitude, easing)))*self.progressSign
     return self.progressEased

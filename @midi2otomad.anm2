@@ -97,7 +97,7 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local a = O.loadBufferLatestNote(pathMidi).noteIndex
+local a = M.PlayState.getInstance(pathMidi).noteIndex
 a = (a+delayIndex)%2
 if(byGrid) then
     obj.rx=180*a*vertical
@@ -122,7 +122,7 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local isPressed = O.loadBufferLatestNote(pathMidi).isPressed
+local isPressed = M.PlayState.getInstance(pathMidi).isPressed
 
 if( isPressed == reverse ) then
     obj.alpha = 0
@@ -147,8 +147,8 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
-local p = N.progressEased
+local N = M.PlayState.getInstance(pathMidi)
+local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
 obj.ox = obj.ox + x*p
 obj.oy = obj.oy + y*p
@@ -179,8 +179,8 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
-local p = N.progressEased
+local N = M.PlayState.getInstance(pathMidi)
+local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
 obj.ox = obj.ox + x*p
 obj.oy = obj.oy + y*p
@@ -221,8 +221,8 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
-local p = N.progressEased
+local N = M.PlayState.getInstance(pathMidi)
+local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
 obj.sx = obj.sx*zoom*(sx + (dzoom + dsx)*p)/10000
 obj.sy = obj.sy*zoom*(sy + (dzoom + dsy)*p)/10000
@@ -248,9 +248,10 @@ local L = O.MidiToAnalyzer
 
 divisions = (divisions == 0) and 99999 or divisions
 
-local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
+local N = M.PlayState.getInstance(pathMidi)
+local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
-obj.rz = obj.rz + (360/divisions*(N.progressIndex))%360 - 360/divisions*N.progressEased
+obj.rz = obj.rz + (360/divisions*(N.progressIndex))%360 - 360/divisions*p
 
 @M2Oステップ拡大
 --label:MIDI2OTOMAD
@@ -274,8 +275,8 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
-local p = N.progressEased
+local N = M.PlayState.getInstance(pathMidi)
+local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
 steps = (N.progressIndex-1) % steps
 
@@ -306,8 +307,8 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, 0, 0, pathMidi)
-local p = N.progressEased
+local N = M.PlayState.getInstance(pathMidi)
+local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
 obj.effect("ラスター",
 "横幅",width + dwidth*p,
@@ -344,8 +345,8 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
-local p = N.progressEased
+local N = M.PlayState.getInstance(pathMidi)
+local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
 obj.effect("色調補正",
 "明るさ", bright + dbright*p,
@@ -382,8 +383,8 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
-local p = N.progressEased
+local N = M.PlayState.getInstance(pathMidi)
+local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
 obj.effect("斜めクリッピング",
 "中心X", cx + dcx*p,
@@ -424,8 +425,8 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local N = O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
-local p = N.progressEased
+local N = M.PlayState.getInstance(pathMidi)
+local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
 obj.effect("マスク",
 "X",x + dx*p,
