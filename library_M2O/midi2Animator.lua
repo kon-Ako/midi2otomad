@@ -4,6 +4,9 @@ local M = {}
 
 --Is this layering appropriate...?
 M.MidiToAnalyzer = require("library_M2O/midi2Analyzer")
+local L = M.MidiToAnalyzer
+
+M.bufferPlayState = {}
 
 --Default values
 
@@ -38,7 +41,7 @@ M.furMes    = 0
 ---@field progressSign integer  sign used to multiply progressEased
 ---@field progressEased number  progress processed through latest easing function
 M.PlayState = {
-    source = M.MidiToAnalyzer.MidiNotes,
+    source = L.MidiNotes,
     currentFrame = 0,
     noteIndex = 1,
     pressTime = 0,
@@ -53,12 +56,13 @@ M.PlayState = {
 }
 M.PlayState.__index = M.PlayState
 
----Create new PlayState
----@param source MidiNotes      The source MidiNotes object the PlayState will update from.
----@param instance? table       If given, turns that table into PlayState instead of making new object
+---Create new PlayState. Also stores it in M.bufferPlayState.
+---@param source MidiNotes      the source MidiNotes object the PlayState will update from.
+---@param instance? table       if given, turns that table into PlayState instead of making new object
 ---@return PlayState instance   PlayState with default value
 function M.PlayState.new(source, instance)
     instance = instance or {}
+    M.bufferPlayState[source.filePath] = instance
     setmetatable(instance, M.PlayState)
     instance.source = source
     instance.currentFrame = 0
@@ -86,10 +90,11 @@ end
 M.PlayState.__tostring = M.PlayState.tostring
 
 ---Update the PlayState
----@param currentBeat timeBeat      time in beats
+---@param currentBeat? timeBeat     time in beats
 ---@param noteIndex? integer|false  noteIndex to read; defaults to the latest note.
 ---@param force? boolean            If true, will always update; else, only update when frame changed.
 function M.PlayState:update(currentBeat, noteIndex, force)
+    currentBeat = currentBeat or M.curBeat
     noteIndex = noteIndex or self.source:getLatestNoteIndex(currentBeat, self.noteIndex)
     if(self.currentFrame ~= M.curFrame or force) then
         self.noteIndex = noteIndex
@@ -102,10 +107,26 @@ function M.PlayState:update(currentBeat, noteIndex, force)
     end
 end
 
+---Get an object of PlayState at given path.
+---@param filePath string                       file path used as index.
+---@param forceReset? boolean                   if true, deletes the PlayState object to recreate it.
+---@return PlayState|MultiPlayState playState   appropriate object created
+function M.PlayState.getInstance(filePath, forceReset)
+    if(forceReset or not M.bufferPlayState[filePath]) then
+        M.bufferPlayState[filePath] = nil
+        M.bufferPlayState[filePath] = M.PlayState.new( L.MidiNotes.getInstance(filePath, forceReset) )
+    end
+    return M.bufferPlayState[filePath]
+end
+
+function M.PlayState:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
+    return self
+end
+
 ---@class MultiPlayState: PlayState PlayState that holds precalculated values for all notes at all frame.
 ---@field totalNotes integer        total amount of notes in source.
 ---@field totalFrame integer        total amount of frame to calculate: will extend with parent object.
----@field FIELD2DARR table          All the keys of flat 2D arrays below.\
+---@field FIELD2DARR table          All the keys of flat 2D arrays below.
 ---@field latestAtFrame table       maps frame+1 (index) to the latestFrame at note
 ---@field multiPressTime table      flat 2D array of pressTime of each note at each frame
 ---@field multiPressNorm table      flat 2D array of pressNorm of each note at each frame

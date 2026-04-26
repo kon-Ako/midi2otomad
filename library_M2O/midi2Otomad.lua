@@ -24,7 +24,7 @@ function O.saveCacheMidi(pathMidi, resetThis)
 
     if(not (L.cacheMidiNotes[pathMidi])) then
         O.bufferLayerPath[obj.layer] = pathMidi
-        L.cacheMidiNotes[pathMidi] = L.midiToRhythm(pathMidi)
+        L.cacheMidiNotes[pathMidi] = L.MidiNotes.getInstance(pathMidi, resetThis==1)
         debug_print("Scanned MIDI at: "..pathMidi)
     end
 
@@ -44,7 +44,7 @@ function O.saveLatestNote(currentTime, pathMidi)
     end
 
     if(not (O.bufferPlayState[pathMidi])) then
-        O.bufferPlayState[pathMidi] = M.PlayState.new(L.cacheMidiNotes[pathMidi])
+        O.bufferPlayState[pathMidi] = M.PlayState.new(L.MidiNotes.getInstance(pathMidi))
     end
     O.bufferPlayState[pathMidi]:update(currentTime)
     return O.bufferPlayState[pathMidi]
