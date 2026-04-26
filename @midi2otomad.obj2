@@ -98,8 +98,8 @@ else
         pathMidi = M.scriptPath.."library_M2O\\test.MID"
     end
 
-    local midiNotes = O.saveCacheMidi(pathMidi, resetThis)
-    local playData = O.saveLatestNote(M.curBeat, pathMidi)
+    local playData = M.PlayState.getInstance(pathMidi, resetThis)
+    playData:update()
 
     if(showNoteEvent == 1 ) then
         local C = midiNotes
@@ -126,7 +126,7 @@ end
 --file@pathObj:画像
 --group:MIDI項目,true
 --file@pathMidi:MIDIファイル
---cehck@resetThis:MIDI再読み込み,false
+--check@resetThis:MIDI再読み込み,false
 --check@isDebug:デバッグ,false
 
 local O = Akto.MidiToOtomad
@@ -137,9 +137,8 @@ if(pathMidi == "") then
     pathMidi = M.scriptPath.."library_M2O\\test.MID"
 end
 
-
-local midiNotes = O.saveCacheMidi(pathMidi, resetThis)
-local playData = O.saveLatestNote(M.curBeat, pathMidi)
+local playData = M.PlayState.getInstance(pathMidi, resetThis)
+playData:update()
 
 if(isDebug) then
     obj.load("text", playData:tostring())
@@ -154,7 +153,7 @@ end
 --track@playSpeed:再生速度,-2000,2000,100,0.01
 --group:MIDI項目,true
 --file@pathMidi:MIDIファイル
---cehck@resetThis:MIDI再読み込み,false
+--check@resetThis:MIDI再読み込み,false
 --check@isDebug:デバッグ,false
 
 local O = Akto.MidiToOtomad
@@ -165,9 +164,8 @@ if(pathMidi == "") then
     pathMidi = M.scriptPath.."library_M2O\\test.MID"
 end
 
-
-local midiNotes = O.saveCacheMidi(pathMidi, resetThis)
-local playData = O.saveLatestNote(M.curBeat, pathMidi)
+local playData = M.PlayState.getInstance(pathMidi, resetThis)
+playData:update()
 
 local vidLength = 0
 if(isDebug) then
@@ -184,7 +182,7 @@ end
 --track@playSpeed:再生速度,-2000,2000,100,0.01
 --group:MIDI項目,true
 --file@pathMidi:MIDIファイル
---cehck@resetThis:MIDI再読み込み,false
+--check@resetThis:MIDI再読み込み,false
 --check@isDebug:デバッグ,false
 
 local O = Akto.MidiToOtomad
@@ -195,9 +193,8 @@ if(pathMidi == "") then
     pathMidi = M.scriptPath.."library_M2O\\test.MID"
 end
 
-
-local midiNotes = O.saveCacheMidi(pathMidi,resetThis)
-local playData = O.saveLatestNote(M.curBeat, pathMidi)
+local playData = M.PlayState.getInstance(pathMidi, resetThis)
+playData:update()
 
 if ( not O.bufferSeqImage[pathObj]) then
     O.bufferSeqImage[pathObj] = M.SequencedImage:new(pathObj)

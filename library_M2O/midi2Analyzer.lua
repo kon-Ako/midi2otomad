@@ -416,16 +416,6 @@ function L.MidiNotes:tostring()
     end
     return str.."\n Loops At: "..tostring(self.loopAt)
 end
-
----@param pathMidi bytesAsString    the file path for MIDI to load 読み込むMIDIのファイルパス
----@param instance? MidiNotes       the table to write the data in
----@return MidiNotes midiNotes      data of rhythm that we could easily interpret  抽出したデータをわかりやすく作り直したもの。
----@deprecated
-function L.midiToRhythm(pathMidi, instance)
-    local string = L.midiOpenAsString(pathMidi)
-    local rawNE = L.RawNoteEvents.fromString(string)
-    local midiNotes = L.MidiNotes.fromRawNoteEvents(pathMidi, rawNE, instance)
-    return midiNotes
-end
+L.MidiNotes.__tostring = L.MidiNotes.tostring
 
 return L

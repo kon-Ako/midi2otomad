@@ -7,6 +7,7 @@ M.MidiToAnalyzer = require("library_M2O/midi2Analyzer")
 local L = M.MidiToAnalyzer
 
 M.bufferPlayState = {}
+M.bufferLayerPath = {}
 
 --Default values
 
@@ -75,6 +76,19 @@ function M.PlayState.new(source, instance)
     return instance
 end
 
+---Get an object of PlayState at given path. Creates one if they don't exist.
+---@param filePath? string                      file path used as index. If empty, uses last used filePath in that layer.
+---@param forceReset? boolean                   if true, deletes the PlayState object to recreate it.
+---@return PlayState|MultiPlayState playState   appropriate object created
+function M.PlayState.getInstance(filePath, forceReset)
+    filePath = filePath or M.bufferLayerPath[obj.layer]
+    if(forceReset or not M.bufferPlayState[filePath]) then
+        M.bufferPlayState[filePath] = nil
+        M.PlayState.new(L.MidiNotes.getInstance(filePath, forceReset))
+    end
+    return M.bufferPlayState[filePath]
+end
+
 ---Returns the inside of PlayState
 ---@return string s     All value with explanation
 function M.PlayState:tostring()
@@ -105,22 +119,26 @@ function M.PlayState:update(currentBeat, noteIndex, force)
         self.wasReleased = (self.pressNorm >= 1)
         self.isPressed = (not self.wasReleased) and self.wasPressed
     end
+    M.bufferLayerPath[obj.layer] = self.source.filePath
 end
 
----Get an object of PlayState at given path.
----@param filePath string                       file path used as index.
----@param forceReset? boolean                   if true, deletes the PlayState object to recreate it.
----@return PlayState|MultiPlayState playState   appropriate object created
-function M.PlayState.getInstance(filePath, forceReset)
-    if(forceReset or not M.bufferPlayState[filePath]) then
-        M.bufferPlayState[filePath] = nil
-        M.bufferPlayState[filePath] = M.PlayState.new( L.MidiNotes.getInstance(filePath, forceReset) )
-    end
-    return M.bufferPlayState[filePath]
-end
-
+---Reprocess the pressTime of note based on information from track bar.
+---@param length number             length of animation, in beats
+---@param isNorm boolean            if true, anim uses pressNorm instead of pressTime
+---@param delayIndex integer        noteIndex is calculated with this number added instead of actual number.
+---@param easing integer            specifies which easing function is used
+---@param magnitude number          magnitude of easing function
+---@param isDecaying integer        0 or 1. If 1, animEased transition from 1→0 instead of 0→1
+---@param isSwitching integer       0 or 1. If 1, animEased swtich between decay and grow every noteIndex.
+---@param isAlternating integer     0 or 1. If 1, noteIndex is multiplied by -1 every other noteIndex.
+---@return number progressEased     [-1,0] XOR [0,1]. Final progress animation with easing.
 function M.PlayState:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
-    return self
+    self.progressIndex = self.noteIndex + delayIndex
+    isDecaying = (isDecaying + isSwitching*self.progressIndex)%2
+    self.progressSign = 1-2*(isAlternating*N.progressIndex%2)
+    self.progress = ((length == 0) and 1) or (isNorm and self.pressNorm or self.pressTime)/length
+    self.progressEased = (isDecaying+(1-2*isDecaying)*(M.ease.force(self.progress, magnitude, easing)))*self.progressSign
+    return self.progressEased
 end
 
 ---@class MultiPlayState: PlayState PlayState that holds precalculated values for all notes at all frame.

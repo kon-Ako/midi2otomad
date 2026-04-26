@@ -4,7 +4,7 @@ local O = {}
 
 O.bufferSeqImage    = {} --Save information about sequenced images.
 O.bufferPlayState   = {} --Saves PlayState wtih file path as index. Is updated ev ery frame as animation changes.
-O.bufferLayerPath   = {} --Saves the path of MIDI loaded by M object on layer at index
+--M.bufferLayerPath   = {} --Saves the path of MIDI loaded by M object on layer at index
 O.bufferMisc        = {zoom = {}} --Other
 
 O.MidiToAnimator = require("library_M2O/midi2Animator")
@@ -13,54 +13,20 @@ O.MidiToAnalyzer = O.MidiToAnimator.MidiToAnalyzer
 local L = O.MidiToAnimator.MidiToAnalyzer
 local M = O.MidiToAnimator
 
----Loads, decodes, and extract notes from MIDI file at path. Stores the notes in a cache with the file path as key.
----@param pathMidi string       Decode MIDI file at the path, stores it in a cache only once. Will not read if cache already exists.
----@param resetThis? boolean    Deletes the cache to re-read the MIDI file.
----@return MidiNotes cache      The cache table of notes from MIDI at given path.
-function O.saveCacheMidi(pathMidi, resetThis)
-    if(resetThis == 1) then
-        L.cacheMidiNotes[pathMidi] = nil
-    end
-
-    if(not (L.cacheMidiNotes[pathMidi])) then
-        O.bufferLayerPath[obj.layer] = pathMidi
-        L.cacheMidiNotes[pathMidi] = L.MidiNotes.getInstance(pathMidi, resetThis==1)
-        debug_print("Scanned MIDI at: "..pathMidi)
-    end
-
-    return L.cacheMidiNotes[pathMidi]
-end
-
----Updates or creates PlayState at the given path. Executed every frame for each M2O objects.
----@param currentTime timeBeat  time in beats
----@param pathMidi? string      The path of midis
----@return PlayState instance   The updated PlayState table
-function O.saveLatestNote(currentTime, pathMidi)
-
-    if((not pathMidi) or pathMidi == "") then
-        pathMidi = O.bufferLayerPath[obj.layer]
-    else
-        O.bufferLayerPath[obj.layer] = pathMidi
-    end
-
-    if(not (O.bufferPlayState[pathMidi])) then
-        O.bufferPlayState[pathMidi] = M.PlayState.new(L.MidiNotes.getInstance(pathMidi))
-    end
-    O.bufferPlayState[pathMidi]:update(currentTime)
-    return O.bufferPlayState[pathMidi]
-end
-
 ---Returns the PlayState out given path
 ---@param pathMidi? string      Path to the MIDI originally loaded and read from
 ---@return PlayState N          PlayState corresponding to given path
+---@deprecated
 function O.loadBufferLatestNote(pathMidi)
+    debug_print("Doing O.loadBufferLatestNote for "..pathMidi)
     if((not pathMidi) or pathMidi == "") then
-        pathMidi = O.bufferLayerPath[obj.layer]
+        pathMidi = M.bufferLayerPath[obj.layer]
     end
-    local N = O.bufferPlayState[pathMidi]
+    local N = M.bufferPlayState[pathMidi]
     if(not N) then
+        debug_print("AAAAAAAAAAAAAAAAAAAAAAAA")
         obj.load("text", "selected MIDI is not loaded!\n選択したMIDIが読み込まれていません！")
-        N = M.PlayState.new(L.cacheMidiNotes[pathMidi])
+        N = M.PlayState.getInstance(pathMidi)
     end
     return N
 end
@@ -77,6 +43,7 @@ end
 ---@param pathMidi? string          Path to the MIDI originally loaded and read from
 ---@return PlayState instance       PlayState with updated animation properties
 function O.saveAnim(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating, pathMidi)
+    debug_print("saveAnim began")
     local N = O.loadBufferLatestNote(pathMidi)
     N.progressIndex = N.noteIndex + delayIndex
     isDecaying = (isDecaying + isSwitching*N.progressIndex)%2

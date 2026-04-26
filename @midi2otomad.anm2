@@ -53,8 +53,8 @@ if(pathMidi == "") then
     pathMidi = M.scriptPath.."library_M2O\\test.MID"
 end
 
-O.saveCacheMidi(pathMidi)
-O.saveLatestNote(M.curBeat, pathMidi)
+local playData = M.PlayState.getInstance(pathMidi, resetThis)
+playData:update()
 
 if(isDebug) then
     local aa, ab, ac, ad = O.bufferPlayState[obj.layer].noteIndex, O.bufferPlayState[obj.layer].pressTime, O.bufferPlayState[obj.layer].pressNorm, O.bufferPlayState[obj.layer].isPressed
