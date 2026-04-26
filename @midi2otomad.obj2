@@ -98,8 +98,7 @@ else
         pathMidi = M.scriptPath.."library_M2O\\test.MID"
     end
 
-    local playData = M.PlayState.getInstance(pathMidi, resetThis)
-    playData:update()
+    local playData = M.PlayState.getInstance(pathMidi, true, resetThis)
 
     if(showNoteEvent == 1 ) then
         local C = midiNotes
@@ -137,8 +136,7 @@ if(pathMidi == "") then
     pathMidi = M.scriptPath.."library_M2O\\test.MID"
 end
 
-local playData = M.PlayState.getInstance(pathMidi, resetThis)
-playData:update()
+local playData = M.PlayState.getInstance(pathMidi, true, resetThis)
 
 if(isDebug) then
     obj.load("text", playData:tostring())
@@ -164,8 +162,7 @@ if(pathMidi == "") then
     pathMidi = M.scriptPath.."library_M2O\\test.MID"
 end
 
-local playData = M.PlayState.getInstance(pathMidi, resetThis)
-playData:update()
+local playData = M.PlayState.getInstance(pathMidi, true, resetThis)
 
 local vidLength = 0
 if(isDebug) then
@@ -193,8 +190,7 @@ if(pathMidi == "") then
     pathMidi = M.scriptPath.."library_M2O\\test.MID"
 end
 
-local playData = M.PlayState.getInstance(pathMidi, resetThis)
-playData:update()
+local playData = M.PlayState.getInstance(pathMidi, true, resetThis)
 
 if ( not O.bufferSeqImage[pathObj]) then
     O.bufferSeqImage[pathObj] = M.SequencedImage:new(pathObj)

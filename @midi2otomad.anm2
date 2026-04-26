@@ -97,8 +97,10 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local a = M.PlayState.getInstance(pathMidi).noteIndex
+local doUpdate = (pathMidi ~= "") or (pathMidi == nil)
+local a = M.PlayState.getInstance(pathMidi, doUpdate).noteIndex
 a = (a+delayIndex)%2
+
 if(byGrid) then
     obj.rx=180*a*vertical
     obj.ry=180*a*horizontal
@@ -122,7 +124,8 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local isPressed = M.PlayState.getInstance(pathMidi).isPressed
+local doUpdate = (pathMidi ~= "") or (pathMidi == nil)
+local isPressed = M.PlayState.getInstance(pathMidi, doUpdate).isPressed
 
 if( isPressed == reverse ) then
     obj.alpha = 0
@@ -147,7 +150,8 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local N = M.PlayState.getInstance(pathMidi)
+local doUpdate = (pathMidi ~= "") or (pathMidi == nil)
+local N = M.PlayState.getInstance(pathMidi, doUpdate)
 local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
 obj.ox = obj.ox + x*p
@@ -179,7 +183,8 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local N = M.PlayState.getInstance(pathMidi)
+local doUpdate = (pathMidi ~= "") or (pathMidi == nil)
+local N = M.PlayState.getInstance(pathMidi, doUpdate)
 local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
 obj.ox = obj.ox + x*p
@@ -221,7 +226,8 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local N = M.PlayState.getInstance(pathMidi)
+local doUpdate = (pathMidi ~= "") or (pathMidi == nil)
+local N = M.PlayState.getInstance(pathMidi, doUpdate)
 local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
 obj.sx = obj.sx*zoom*(sx + (dzoom + dsx)*p)/10000
@@ -248,7 +254,8 @@ local L = O.MidiToAnalyzer
 
 divisions = (divisions == 0) and 99999 or divisions
 
-local N = M.PlayState.getInstance(pathMidi)
+local doUpdate = (pathMidi ~= "") or (pathMidi == nil)
+local N = M.PlayState.getInstance(pathMidi, doUpdate)
 local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
 obj.rz = obj.rz + (360/divisions*(N.progressIndex))%360 - 360/divisions*p
@@ -275,7 +282,8 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local N = M.PlayState.getInstance(pathMidi)
+local doUpdate = (pathMidi ~= "") or (pathMidi == nil)
+local N = M.PlayState.getInstance(pathMidi, doUpdate)
 local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
 steps = (N.progressIndex-1) % steps
@@ -307,7 +315,8 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local N = M.PlayState.getInstance(pathMidi)
+local doUpdate = (pathMidi ~= "") or (pathMidi == nil)
+local N = M.PlayState.getInstance(pathMidi, doUpdate)
 local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
 obj.effect("ラスター",
@@ -345,7 +354,8 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local N = M.PlayState.getInstance(pathMidi)
+local doUpdate = (pathMidi ~= "") or (pathMidi == nil)
+local N = M.PlayState.getInstance(pathMidi, doUpdate)
 local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
 obj.effect("色調補正",
@@ -383,7 +393,8 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local N = M.PlayState.getInstance(pathMidi)
+local doUpdate = (pathMidi ~= "") or (pathMidi == nil)
+local N = M.PlayState.getInstance(pathMidi, doUpdate)
 local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
 obj.effect("斜めクリッピング",
@@ -425,7 +436,8 @@ local O = Akto.MidiToOtomad
 local M = O.MidiToAnimator
 local L = O.MidiToAnalyzer
 
-local N = M.PlayState.getInstance(pathMidi)
+local doUpdate = (pathMidi ~= "") or (pathMidi == nil)
+local N = M.PlayState.getInstance(pathMidi, doUpdate)
 local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
 obj.effect("マスク",

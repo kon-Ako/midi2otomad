@@ -78,9 +78,10 @@ end
 
 ---Get an object of PlayState at given path. Creates one if they don't exist.
 ---@param filePath? string                      file path used as index. If empty, uses last used filePath in that layer.
+---@param doUpdate? boolean                     Update the instance before returning it.
 ---@param forceReset? boolean                   if true, deletes the PlayState object to recreate it.
----@return PlayState|MultiPlayState playState   appropriate object created
-function M.PlayState.getInstance(filePath, forceReset)
+---@return PlayState|MultiPlayState playState   appropriate instance of object created
+function M.PlayState.getInstance(filePath, doUpdate, forceReset)
 
     if(not filePath or filePath == "") then
         filePath = M.bufferLayerPath[obj.layer]
@@ -89,6 +90,10 @@ function M.PlayState.getInstance(filePath, forceReset)
     if(forceReset or not M.bufferPlayState[filePath]) then
         M.bufferPlayState[filePath] = nil
         M.PlayState.new(L.MidiNotes.getInstance(filePath, forceReset))
+    end
+
+    if(doUpdate) then
+        M.bufferPlayState[filePath]:update()
     end
 
     return M.bufferPlayState[filePath]
