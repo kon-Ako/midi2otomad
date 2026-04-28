@@ -1,8 +1,3 @@
-@M2O下のフィルタを事前実行
---label:MIDI2OTOMAD
-
-obj.effect()
-
 @M2O事前実行環境でペアレントオブジェクト化
 --label:MIDI2OTOMAD
 --track@BPM:BPM,30,240,160,1
@@ -154,15 +149,15 @@ obj.oy = obj.oy + y*p
 
 @M2O標準描画
 --label:MIDI2OTOMAD
---track@x:X,-5000,5000,0,0.01
---track@y:Y,-5000,5000,0,0.01
---track@z:Z,-5000,5000,0,0.01
---track@rx:X軸回転,-3600,3600,0,0.01
---track@ry:Y軸回転,-3600,3600,0,0.01
---track@rz:Z軸回転,-3600,3600,0,0.01
---track@zoom:拡大率,0,10000,100,0.001
+--track@x:ΔX,-5000,5000,0,0.01
+--track@y:ΔY,-5000,5000,0,0.01
+--track@z:ΔZ,-5000,5000,0,0.01
+--track@rx:ΔX軸回転,-3600,3600,0,0.01
+--track@ry:ΔY軸回転,-3600,3600,0,0.01
+--track@rz:ΔZ軸回転,-3600,3600,0,0.01
+--track@zoom:Δ拡大率,0,10000,100,0.001
 --track@aspect:縦横比,-100,100,0,0.001
---track@transparency:透明度,0,100,0,0.01
+--track@transparency:Δ透明度,0,100,0,0.01
 --group:M2O共通項目,true
 --track@length:時間(拍),0,10,1,0.01
 --check@isNorm:正規化,false
@@ -312,7 +307,7 @@ local L = O.MidiToAnalyzer
 
 local doUpdate = (pathMidi ~= "") or (pathMidi == nil)
 local N = M.PlayState.getInstance(pathMidi, doUpdate)
-local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
+local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, 0, 0)
 
 obj.effect("ラスター",
 "横幅",width + dwidth*p,
@@ -391,6 +386,11 @@ local L = O.MidiToAnalyzer
 local doUpdate = (pathMidi ~= "") or (pathMidi == nil)
 local N = M.PlayState.getInstance(pathMidi, doUpdate)
 local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
+
+debug_print(dwidth*p)
+if(width == 0 and dwidth ~= 0 and dwidth*p <= 0.5) then
+    obj.alpha = 0
+end
 
 obj.effect("斜めクリッピング",
 "中心X", cx + dcx*p,

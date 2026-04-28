@@ -348,6 +348,7 @@ function M.SequencedImage.getInstance(filePath, loopStart, loopEnd, forceReset)
         end
 
         seqImage.finalFrame = seqImage:findFinalFrame()
+    end
 
     seqImage.loopStart  = math.max(loopStart, seqImage.startFrame)
     seqImage.loopEnd    = math.min(seqImage.finalFrame, math.max(loopStart, loopEnd))
