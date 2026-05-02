@@ -1,7 +1,0 @@
-{
-    "Lua.diagnostics.globals": [
-        "debug_print",
-        "obj"
-    ],
-    "Lua.runtime.unicodeName": true
-}
