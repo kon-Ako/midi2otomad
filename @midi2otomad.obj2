@@ -1,5 +1,5 @@
 @MIDI2OTOMADペアレントオブジェクト
---information: MIDI2OTOMAD ver0.0.1 by Akto
+--information: MIDI2OTOMAD ver0.0.2 by Akto
 --label:MIDI2OTOMAD
 --track@BPM:BPM,30,240,160,1
 --track@mesPlus:開始小節,-240,240,0,1

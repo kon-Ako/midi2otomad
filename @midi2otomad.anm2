@@ -387,7 +387,6 @@ local doUpdate = (pathMidi ~= "") or (pathMidi == nil)
 local N = M.PlayState.getInstance(pathMidi, doUpdate)
 local p = N:getEased(length, isNorm, delayIndex, easing, magnitude, isDecaying, isSwitching, isAlternating)
 
-debug_print(dwidth*p)
 if(width == 0 and dwidth ~= 0 and dwidth*p <= 0.5) then
     obj.alpha = 0
 end

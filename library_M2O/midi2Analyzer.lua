@@ -180,7 +180,7 @@ L.bufferRawNoteEvents = L.RawNoteEvents.new()
 ---@return RawNoteEvents tblMIDI    MIDI deconstructed into table.  テーブルとして解体したMIDI
 function L.RawNoteEvents.fromString(string, instance)
     local dict = L.RawNoteEvents.new(instance or L.bufferRawNoteEvents)
-    local currentSize = string:byte(7)*256 + string:byte(8)
+    local currentSize = L.readByte(string, 7, 2)
     local curIndx = 1
     local pos = currentSize + 9
     local currentData = 0
@@ -192,11 +192,11 @@ function L.RawNoteEvents.fromString(string, instance)
     dict.midiFormat = string:byte(10)
     dict.numTrack = string:byte(12)
     dict.isSMPTETime = bit.rshift(string:byte(13), 7) == 1
-    dict.ppq = string:byte(13)*256 + string:byte(14)
+    dict.ppq = L.readByte(string, 13, 2)
 
     for trackIndex=0, dict.numTrack-1 do
-        pos = string:find("MTrk", pos)
-        if(not pos) then
+        pos = string:find("MTrk", pos) or -1
+        if(pos == -1) then
             debug_print("No more MTrk found")
             break
         end
